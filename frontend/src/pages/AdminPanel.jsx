@@ -277,8 +277,8 @@ const LivePreview = ({ settings, weather }) => {
   const isPortrait = settings.display_orientation === "portrait";
   const ratioW = parseFloat(settings.display_width) || 16;
   const ratioH = parseFloat(settings.display_height) || 9;
+  const layout = settings.widget_layout || "bottom-left";
   
-  // Calculate preview dimensions to fit within a max box
   const maxW = 480;
   const maxH = 320;
   const aspectRatio = ratioW / ratioH;
@@ -292,7 +292,6 @@ const LivePreview = ({ settings, weather }) => {
     previewW = maxH * aspectRatio;
   }
 
-  // Weather theme colors
   const getThemeBg = () => {
     const condition = weather?.condition?.toLowerCase() || "";
     if (condition.includes("rain") || condition.includes("drizzle")) return "linear-gradient(180deg, #1e293b 0%, #334155 40%, #475569 100%)";
@@ -304,86 +303,107 @@ const LivePreview = ({ settings, weather }) => {
     return "linear-gradient(180deg, #475569 0%, #64748b 40%, #94a3b8 100%)";
   };
 
+  // Mini widget blocks
+  const hotelBlock = <div className="bg-white/20 rounded h-2 w-14 mb-0.5" />;
+  const clockBlock = <div className="bg-white/25 rounded h-3 w-12 mb-0.5" />;
+  const weatherBlock = (
+    <div className="p-1 rounded bg-white/15 backdrop-blur">
+      <div className="flex items-center gap-1">
+        <div className="w-4 h-4 rounded bg-white/20" />
+        <div>
+          <div className="bg-white/30 rounded h-1.5 w-7 mb-0.5" />
+          <div className="bg-white/15 rounded h-1 w-10" />
+        </div>
+      </div>
+    </div>
+  );
+  const newsBlock = (
+    <div className="p-1 rounded bg-white/10">
+      <div className="bg-white/20 rounded h-1 w-full mb-0.5" />
+      <div className="bg-white/10 rounded h-1 w-3/4" />
+    </div>
+  );
+
+  const renderLayoutPreview = () => {
+    if (isPortrait) {
+      return (
+        <div className="absolute inset-0 p-2.5 flex flex-col">
+          <div className="text-center">{hotelBlock}</div>
+          <div className="text-center mt-1">{clockBlock}</div>
+          <div className="flex-1" />
+          <div className="mb-1">{weatherBlock}</div>
+          {newsBlock}
+        </div>
+      );
+    }
+    switch (layout) {
+      case "top-right":
+        return (
+          <div className="absolute inset-0 p-2.5 flex flex-col">
+            <div className="flex justify-between items-start">
+              <div>{clockBlock}</div>
+              <div className="flex flex-col items-end gap-1">
+                {weatherBlock}
+                <div className="w-16">{newsBlock}</div>
+              </div>
+            </div>
+            <div className="flex-1" />
+            <div>{hotelBlock}</div>
+          </div>
+        );
+      case "bottom-bar":
+        return (
+          <div className="absolute inset-0 p-2.5 flex flex-col">
+            <div className="flex justify-between">{hotelBlock}{clockBlock}</div>
+            <div className="flex-1" />
+            <div className="flex items-end gap-2">
+              <div className="flex-shrink-0">{weatherBlock}</div>
+              <div className="flex-1">{newsBlock}</div>
+            </div>
+          </div>
+        );
+      case "centered":
+        return (
+          <div className="absolute inset-0 p-2.5 flex flex-col items-center justify-center gap-1">
+            {hotelBlock}{clockBlock}
+            <div className="h-1" />
+            {weatherBlock}
+            <div className="w-20">{newsBlock}</div>
+          </div>
+        );
+      case "split":
+        return (
+          <div className="absolute inset-0 flex">
+            <div className="flex-1" />
+            <div className="w-[40%] bg-black/30 p-2 flex flex-col justify-between">
+              <div>{hotelBlock}<div className="mt-1">{clockBlock}</div></div>
+              <div className="space-y-1">{weatherBlock}{newsBlock}</div>
+            </div>
+          </div>
+        );
+      default: // bottom-left
+        return (
+          <div className="absolute inset-0 p-2.5 flex flex-col">
+            <div className="flex justify-between">{hotelBlock}{clockBlock}</div>
+            <div className="flex-1" />
+            <div className="flex justify-between items-end gap-2">
+              {weatherBlock}
+              <div className="max-w-[45%]">{newsBlock}</div>
+            </div>
+          </div>
+        );
+    }
+  };
+
   return (
     <div className="flex flex-col items-center gap-4" data-testid="live-preview">
-      {/* Preview Canvas */}
       <div 
         className="relative rounded-lg overflow-hidden shadow-2xl border border-white/20"
         style={{ width: previewW, height: previewH, background: getThemeBg() }}
         data-testid="preview-canvas"
       >
-        {/* Mini photo background */}
         <div className="absolute inset-0 bg-black/20" />
-        
-        {isPortrait ? (
-          /* Portrait layout preview */
-          <div className="absolute inset-0 p-3 flex flex-col">
-            {/* Top - Hotel Name */}
-            <div className="text-center mb-1">
-              <div className="bg-white/20 rounded h-2.5 w-20 mx-auto mb-1" />
-              <div className="bg-white/10 rounded h-1.5 w-12 mx-auto" />
-            </div>
-            {/* Clock area */}
-            <div className="text-center my-1">
-              <div className="bg-white/25 rounded h-4 w-16 mx-auto mb-0.5" />
-              <div className="bg-white/10 rounded h-1 w-14 mx-auto" />
-            </div>
-            {/* Photo area */}
-            <div className="flex-1 mx-2 my-1 rounded bg-white/10 flex items-center justify-center">
-              <ImageIcon className="w-6 h-6 text-white/20" />
-            </div>
-            {/* Weather widget */}
-            <div className="mx-2 my-1 p-1.5 rounded bg-white/15 backdrop-blur">
-              <div className="flex items-center gap-2">
-                <div className="w-5 h-5 rounded bg-white/20" />
-                <div>
-                  <div className="bg-white/30 rounded h-2 w-8 mb-0.5" />
-                  <div className="bg-white/15 rounded h-1 w-12" />
-                </div>
-              </div>
-            </div>
-            {/* News */}
-            <div className="mx-2 mb-1 p-1.5 rounded bg-white/10">
-              <div className="bg-white/20 rounded h-1 w-full mb-0.5" />
-              <div className="bg-white/10 rounded h-1 w-3/4" />
-            </div>
-          </div>
-        ) : (
-          /* Landscape layout preview */
-          <div className="absolute inset-0 p-3 flex flex-col">
-            {/* Top row - Hotel name & clock */}
-            <div className="flex justify-between items-start mb-1">
-              <div>
-                <div className="bg-white/20 rounded h-2 w-16 mb-0.5" />
-                <div className="bg-white/10 rounded h-1 w-8" />
-              </div>
-              <div className="text-right">
-                <div className="bg-white/25 rounded h-3.5 w-14 mb-0.5 ml-auto" />
-                <div className="bg-white/10 rounded h-1 w-12 ml-auto" />
-              </div>
-            </div>
-            {/* Spacer */}
-            <div className="flex-1" />
-            {/* Bottom row - weather & news */}
-            <div className="flex justify-between items-end gap-3">
-              <div className="p-1.5 rounded bg-white/15 backdrop-blur flex-1 max-w-[45%]">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded bg-white/20" />
-                  <div>
-                    <div className="bg-white/30 rounded h-2.5 w-10 mb-0.5" />
-                    <div className="bg-white/15 rounded h-1 w-14" />
-                  </div>
-                </div>
-              </div>
-              <div className="p-1.5 rounded bg-white/10 flex-1 max-w-[40%]">
-                <div className="bg-white/20 rounded h-1 w-full mb-0.5" />
-                <div className="bg-white/10 rounded h-1 w-3/4" />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Slide indicators */}
+        {renderLayoutPreview()}
         <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-0.5">
           <div className="w-3 h-0.5 rounded-full bg-white/80" />
           <div className="w-0.5 h-0.5 rounded-full bg-white/30" />
@@ -391,8 +411,6 @@ const LivePreview = ({ settings, weather }) => {
           <div className="w-0.5 h-0.5 rounded-full bg-white/30" />
         </div>
       </div>
-
-      {/* Format Info */}
       <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm" data-testid="format-info">
         <div className="flex justify-between gap-4">
           <span className="text-muted-foreground">Aspect Ratio:</span>
@@ -409,6 +427,14 @@ const LivePreview = ({ settings, weather }) => {
         <div className="flex justify-between gap-4">
           <span className="text-muted-foreground">Height:</span>
           <span className="font-mono font-medium">{settings.display_height} in</span>
+        </div>
+        <div className="flex justify-between gap-4">
+          <span className="text-muted-foreground">Layout:</span>
+          <span className="font-medium capitalize">{(settings.widget_layout || "bottom-left").replace("-", " ")}</span>
+        </div>
+        <div className="flex justify-between gap-4">
+          <span className="text-muted-foreground">Widget Scale:</span>
+          <span className="font-mono font-medium">{(settings.widget_scale || 1).toFixed(1)}x</span>
         </div>
       </div>
     </div>
@@ -1506,6 +1532,170 @@ export default function AdminPanel() {
                             setSettings(prev => ({ ...prev, display_height: h, aspect_ratio: "custom" }));
                           }}
                           data-testid="height-input"
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Widget Layout Presets */}
+                <Card className="bg-card border-white/10">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Maximize2 className="w-5 h-5" />
+                      Widget Layout
+                    </CardTitle>
+                    <CardDescription>Choose how widgets are positioned on photo slides</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-5 gap-3" data-testid="layout-presets">
+                      {[
+                        { value: "bottom-left", label: "Bottom Left", desc: "Classic" },
+                        { value: "top-right", label: "Top Right", desc: "Info panel" },
+                        { value: "bottom-bar", label: "Bottom Bar", desc: "Full width" },
+                        { value: "centered", label: "Centered", desc: "Focus" },
+                        { value: "split", label: "Split", desc: "Side panel" },
+                      ].map((preset) => {
+                        const isActive = (settings.widget_layout || "bottom-left") === preset.value;
+                        return (
+                          <button
+                            key={preset.value}
+                            onClick={() => setSettings(prev => ({ ...prev, widget_layout: preset.value }))}
+                            data-testid={`layout-${preset.value}`}
+                            className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${
+                              isActive
+                                ? "border-primary bg-primary/10 ring-1 ring-primary/30"
+                                : "border-white/10 hover:border-white/25 hover:bg-white/5"
+                            }`}
+                          >
+                            {/* Mini layout preview */}
+                            <div className="w-14 h-9 rounded border border-current/40 relative overflow-hidden bg-white/5">
+                              {preset.value === "bottom-left" && (
+                                <>
+                                  <div className="absolute top-1 left-1 w-4 h-1 rounded-sm bg-current/40" />
+                                  <div className="absolute top-1 right-1 w-3 h-2 rounded-sm bg-current/30" />
+                                  <div className="absolute bottom-1 left-1 w-5 h-2 rounded-sm bg-current/50" />
+                                  <div className="absolute bottom-1 right-1 w-4 h-1.5 rounded-sm bg-current/30" />
+                                </>
+                              )}
+                              {preset.value === "top-right" && (
+                                <>
+                                  <div className="absolute top-1 right-1 w-5 h-2 rounded-sm bg-current/50" />
+                                  <div className="absolute top-3.5 right-1 w-4 h-1.5 rounded-sm bg-current/30" />
+                                  <div className="absolute bottom-1 left-1 w-4 h-1 rounded-sm bg-current/40" />
+                                </>
+                              )}
+                              {preset.value === "bottom-bar" && (
+                                <>
+                                  <div className="absolute top-1 left-1 w-4 h-1 rounded-sm bg-current/40" />
+                                  <div className="absolute top-1 right-1 w-3 h-2 rounded-sm bg-current/30" />
+                                  <div className="absolute bottom-0 left-0 right-0 h-3 bg-current/20 flex items-center px-1 gap-0.5">
+                                    <div className="w-3 h-1.5 rounded-sm bg-current/50" />
+                                    <div className="flex-1" />
+                                    <div className="w-4 h-1 rounded-sm bg-current/30" />
+                                  </div>
+                                </>
+                              )}
+                              {preset.value === "centered" && (
+                                <>
+                                  <div className="absolute top-1 left-1/2 -translate-x-1/2 w-5 h-1 rounded-sm bg-current/40" />
+                                  <div className="absolute top-2.5 left-1/2 -translate-x-1/2 w-3 h-1.5 rounded-sm bg-current/30" />
+                                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-6 h-2 rounded-sm bg-current/50" />
+                                  <div className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-5 h-1 rounded-sm bg-current/30" />
+                                </>
+                              )}
+                              {preset.value === "split" && (
+                                <>
+                                  <div className="absolute top-0 right-0 bottom-0 w-[45%] bg-current/15" />
+                                  <div className="absolute top-1 right-0.5 w-4 h-1 rounded-sm bg-current/50" />
+                                  <div className="absolute top-2.5 right-0.5 w-3 h-1 rounded-sm bg-current/30" />
+                                  <div className="absolute bottom-2 right-0.5 w-4 h-1.5 rounded-sm bg-current/40" />
+                                  <div className="absolute bottom-0.5 right-0.5 w-4 h-1 rounded-sm bg-current/30" />
+                                </>
+                              )}
+                            </div>
+                            <span className="text-xs font-semibold">{preset.label}</span>
+                            <span className="text-[10px] text-muted-foreground">{preset.desc}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Widget Sizing & Spacing */}
+                <Card className="bg-card border-white/10">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Ruler className="w-5 h-5" />
+                      Widget Sizing & Spacing
+                    </CardTitle>
+                    <CardDescription>Fine-tune widget size, font scale, and spacing</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Label>Widget Scale</Label>
+                        <span className="text-sm font-mono bg-secondary px-2 py-1 rounded" data-testid="widget-scale-value">
+                          {(settings.widget_scale || 1).toFixed(1)}x
+                        </span>
+                      </div>
+                      <Slider
+                        value={[(settings.widget_scale || 1) * 100]}
+                        onValueChange={(value) => setSettings(prev => ({ ...prev, widget_scale: value[0] / 100 }))}
+                        min={50}
+                        max={150}
+                        step={5}
+                        data-testid="widget-scale-slider"
+                      />
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>0.5x</span><span>1.0x</span><span>1.5x</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Label>Font Scale</Label>
+                        <span className="text-sm font-mono bg-secondary px-2 py-1 rounded" data-testid="font-scale-value">
+                          {(settings.font_scale || 1).toFixed(1)}x
+                        </span>
+                      </div>
+                      <Slider
+                        value={[(settings.font_scale || 1) * 100]}
+                        onValueChange={(value) => setSettings(prev => ({ ...prev, font_scale: value[0] / 100 }))}
+                        min={70}
+                        max={150}
+                        step={5}
+                        data-testid="font-scale-slider"
+                      />
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>0.7x</span><span>1.0x</span><span>1.5x</span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Label>Outer Padding (px)</Label>
+                        <Input
+                          type="number"
+                          min="8"
+                          max="120"
+                          step="4"
+                          value={settings.widget_padding || 48}
+                          onChange={(e) => setSettings(prev => ({ ...prev, widget_padding: parseInt(e.target.value) || 48 }))}
+                          data-testid="widget-padding-input"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Widget Spacing (px)</Label>
+                        <Input
+                          type="number"
+                          min="4"
+                          max="64"
+                          step="4"
+                          value={settings.widget_spacing || 16}
+                          onChange={(e) => setSettings(prev => ({ ...prev, widget_spacing: parseInt(e.target.value) || 16 }))}
+                          data-testid="widget-spacing-input"
                         />
                       </div>
                     </div>

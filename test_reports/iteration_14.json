@@ -1,0 +1,97 @@
+{
+  "summary": "Phase 3 Widget Layout Controls testing complete. All 27 backend tests passed. All 5 layout presets (bottom-left, top-right, bottom-bar, centered, split) working correctly in both admin panel and lobby display. Widget sizing controls (scale, font scale, padding, spacing) functional. Phase 1 and Phase 2 features verified working (regression tests passed).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/weather", "issue": "Returns 401 - OpenWeatherMap API key appears invalid or expired. App handles gracefully with error message.", "priority": "LOW"}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "passed_tests": [
+    "Backend: GET /api/settings returns widget_layout field (default: bottom-left)",
+    "Backend: GET /api/settings returns widget_scale field (default: 1.0)",
+    "Backend: GET /api/settings returns font_scale field (default: 1.0)",
+    "Backend: GET /api/settings returns widget_padding field (default: 48)",
+    "Backend: GET /api/settings returns widget_spacing field (default: 16)",
+    "Backend: PUT /api/settings updates widget_layout to bottom-left",
+    "Backend: PUT /api/settings updates widget_layout to top-right",
+    "Backend: PUT /api/settings updates widget_layout to bottom-bar",
+    "Backend: PUT /api/settings updates widget_layout to centered",
+    "Backend: PUT /api/settings updates widget_layout to split",
+    "Backend: PUT /api/settings updates widget_scale (0.5x to 1.5x range)",
+    "Backend: PUT /api/settings updates font_scale (0.7x to 1.5x range)",
+    "Backend: PUT /api/settings updates widget_padding",
+    "Backend: PUT /api/settings updates widget_spacing",
+    "Backend: All widget settings persist after update",
+    "Backend: Phase 1 endpoints still work (health, news, images, settings)",
+    "Backend: Phase 2 endpoints still work (attractions, content)",
+    "Frontend: Admin panel loads with 5 tabs (Images, Attractions, Content, Settings, Display)",
+    "Frontend: Display tab shows Widget Layout section with 5 preset buttons",
+    "Frontend: Layout preset buttons have mini thumbnails showing layout preview",
+    "Frontend: Clicking layout preset updates live preview immediately",
+    "Frontend: Widget Scale slider (0.5x-1.5x) present and functional",
+    "Frontend: Font Scale slider (0.7x-1.5x) present and functional",
+    "Frontend: Widget Padding input present and functional",
+    "Frontend: Widget Spacing input present and functional",
+    "Frontend: Live Preview shows current layout and widget scale",
+    "Frontend: Format info displays Layout and Widget Scale values",
+    "Frontend: Save Display Settings button saves all settings",
+    "Frontend: Lobby display renders bottom-left layout correctly",
+    "Frontend: Lobby display renders split layout with right-side info panel",
+    "Frontend: Lobby display renders centered layout with centered widgets",
+    "Frontend: Lobby display renders top-right layout",
+    "Frontend: Lobby display renders bottom-bar layout",
+    "Frontend: Attractions tab still works (Phase 2 regression)",
+    "Frontend: Content tab still works with 7 section types (Phase 2 regression)"
+  ],
+  "test_report_links": [
+    "/app/backend/tests/test_phase3_widget_layouts.py",
+    "/app/test_reports/pytest/pytest_phase3_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_phase3_widget_layouts.py"
+  ],
+  "success_rate": {
+    "backend": "100% (27/27 tests passed)",
+    "frontend": "100% (all Phase 3 features working)"
+  },
+  "test_credentials": "No authentication required. Admin panel at /admin is open access.",
+  "seed_data_creation": "6 default attractions seeded. Settings reset to defaults after tests.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Phase 3 Widget Layout Controls complete. Admin Display tab has: Aspect Ratio presets (16:9, 9:16, 4:3, 3:4, custom), Orientation toggle (landscape/portrait), Dimensions inputs, Widget Layout (5 presets: bottom-left, top-right, bottom-bar, centered, split), Widget Sizing (widget-scale-slider 0.5x-1.5x, font-scale-slider 0.7x-1.5x, widget-padding-input, widget-spacing-input), Display Scale slider, Live Preview. data-testid attributes: 'layout-presets', 'layout-{name}', 'widget-scale-slider', 'font-scale-slider', 'widget-padding-input', 'widget-spacing-input', 'live-preview', 'format-info'. LobbyDisplay.jsx renderPhotoLayout() handles all 5 layouts. Portrait mode always uses stacked vertical layout.",
+  "phase3_verification": {
+    "widget_layout_presets": {
+      "bottom-left": "Working - hotel name top-left, clock top-right, weather bottom-left, news bottom-right",
+      "top-right": "Working - clock top-left, weather & news top-right, hotel name bottom-left",
+      "bottom-bar": "Working - everything in a row at bottom",
+      "centered": "Working - all stacked centered vertically",
+      "split": "Working - 60% photo left, 40% glass panel right with all info"
+    },
+    "widget_sizing": {
+      "widget_scale": "Working - 0.5x to 1.5x slider",
+      "font_scale": "Working - 0.7x to 1.5x slider",
+      "widget_padding": "Working - outer padding in px",
+      "widget_spacing": "Working - gap between widgets in px"
+    },
+    "admin_ui": {
+      "display_tab": "Working - all controls present and functional",
+      "live_preview": "Working - updates when layout changes",
+      "format_info": "Working - shows Layout and Widget Scale"
+    },
+    "lobby_display": {
+      "layout_rendering": "Working - all 5 layouts render correctly",
+      "portrait_mode": "Working - uses stacked vertical layout"
+    }
+  },
+  "external_api_notes": {
+    "openweathermap": "API key returning 401 - may need to be renewed or replaced. App handles gracefully.",
+    "newsapi": "Working correctly"
+  }
+}

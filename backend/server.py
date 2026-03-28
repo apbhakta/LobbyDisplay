@@ -63,6 +63,11 @@ class Settings(BaseModel):
     enable_weather_animations: bool = True
     attractions_per_slide: int = 6
     attractions_auto_rotate: bool = True
+    widget_layout: str = "bottom-left"  # bottom-left, top-right, bottom-bar, centered, split
+    widget_scale: float = 1.0  # 0.5-1.5 global widget size multiplier
+    font_scale: float = 1.0  # 0.7-1.5 global font scale
+    widget_padding: int = 48  # outer padding px
+    widget_spacing: int = 16  # gap between widgets px
 
 class SettingsUpdate(BaseModel):
     hotel_name: Optional[str] = None
@@ -80,6 +85,11 @@ class SettingsUpdate(BaseModel):
     enable_weather_animations: Optional[bool] = None
     attractions_per_slide: Optional[int] = None
     attractions_auto_rotate: Optional[bool] = None
+    widget_layout: Optional[str] = None
+    widget_scale: Optional[float] = None
+    font_scale: Optional[float] = None
+    widget_padding: Optional[int] = None
+    widget_spacing: Optional[int] = None
 
 class HotelImage(BaseModel):
     model_config = ConfigDict(extra="ignore")

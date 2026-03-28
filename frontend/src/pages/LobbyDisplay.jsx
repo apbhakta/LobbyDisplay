@@ -241,6 +241,11 @@ export default function LobbyDisplay() {
     display_scale: 100,
     display_width: 16,
     display_height: 9,
+    widget_layout: "bottom-left",
+    widget_scale: 1,
+    font_scale: 1,
+    widget_padding: 48,
+    widget_spacing: 16,
   });
   const [images, setImages] = useState([]);
   const [slides, setSlides] = useState([]);
@@ -452,9 +457,189 @@ export default function LobbyDisplay() {
   // Display settings
   const isPortrait = settings.display_orientation === "portrait";
   const scale = settings.display_scale / 100;
+  const layout = settings.widget_layout || "bottom-left";
+  const wScale = settings.widget_scale || 1;
+  const fScale = settings.font_scale || 1;
+  const pad = settings.widget_padding || 48;
+  const gap = settings.widget_spacing || 16;
 
   const isSnow = currentTheme === "snow";
   const textColor = isSnow ? "text-slate-800" : "text-white";
+
+  // Widget sizing style helper
+  const widgetStyle = { transform: `scale(${wScale})`, transformOrigin: 'inherit' };
+  const fontStyle = { fontSize: `${fScale}em` };
+
+  // Render the widget set (hotel name, clock, weather, news)
+  const renderHotelName = (align = "left") => (
+    <motion.div
+      className={align === "center" ? "text-center" : ""}
+      initial={{ opacity: 0, y: -20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 1 }}
+      style={widgetStyle}
+    >
+      <h1 className={`font-light tracking-widest uppercase ${textColor}`} style={{ fontSize: `${Math.max(1.5, 2.25 * fScale)}rem` }}>
+        {settings.hotel_name}
+      </h1>
+      <p className={`${isSnow ? "text-slate-600" : "text-white/60"} mt-1`} style={{ fontSize: `${fScale}rem` }}>
+        Welcome
+      </p>
+    </motion.div>
+  );
+
+  const renderClock = (align = "right") => (
+    <motion.div
+      initial={{ opacity: 0, y: -20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 1, delay: 0.2 }}
+      style={widgetStyle}
+    >
+      <LiveClock theme={currentTheme} isPortrait={align === "center"} />
+      <DateDisplay theme={currentTheme} isPortrait={align === "center"} />
+    </motion.div>
+  );
+
+  const renderWeather = () => (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 1, delay: 0.4 }}
+      style={widgetStyle}
+    >
+      <WeatherWidget weather={weather} theme={currentTheme} isPortrait={isPortrait} />
+    </motion.div>
+  );
+
+  const renderNews = () => (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 1, delay: 0.6 }}
+      style={widgetStyle}
+    >
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={currentHeadlineIndex}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.8 }}
+        >
+          <NewsHeadline headline={currentHeadline} theme={currentTheme} />
+        </motion.div>
+      </AnimatePresence>
+    </motion.div>
+  );
+
+  // Layout renderers for photo slides
+  const renderPhotoLayout = () => {
+    const p = `${pad}px`;
+    const g = `${gap}px`;
+
+    if (isPortrait) {
+      // Portrait always uses stacked layout
+      return (
+        <div className="absolute inset-0 z-10 flex flex-col" style={{ padding: p, gap: g }}>
+          <div className="text-center">{renderHotelName("center")}</div>
+          <div className="text-center">{renderClock("center")}</div>
+          <div className="flex-1" />
+          {renderWeather()}
+          {renderNews()}
+        </div>
+      );
+    }
+
+    switch (layout) {
+      case "top-right":
+        return (
+          <div className="absolute inset-0 z-10 flex flex-col" style={{ padding: p, gap: g }}>
+            <div className="flex justify-between items-start" style={{ gap: g }}>
+              {renderClock("left")}
+              <div className="flex flex-col items-end" style={{ gap: g }}>
+                {renderWeather()}
+                <div className="max-w-md">{renderNews()}</div>
+              </div>
+            </div>
+            <div className="flex-1" />
+            <div>{renderHotelName()}</div>
+          </div>
+        );
+
+      case "bottom-bar":
+        return (
+          <div className="absolute inset-0 z-10 flex flex-col" style={{ padding: p }}>
+            <div className="flex justify-between items-start">
+              {renderHotelName()}
+              {renderClock()}
+            </div>
+            <div className="flex-1" />
+            <div className="flex items-end justify-between" style={{ gap: g }}>
+              <div style={{ flex: '0 0 auto' }}>{renderWeather()}</div>
+              <div style={{ flex: '1 1 auto', maxWidth: '40%' }}>{renderNews()}</div>
+              <div className="text-right">
+                <motion.div
+                  className={`text-sm ${isSnow ? "text-slate-600" : "text-white/60"}`}
+                  animate={{ opacity: [0.6, 1, 0.6] }}
+                  transition={{ duration: 3, repeat: Infinity }}
+                >
+                  {settings.city}
+                </motion.div>
+              </div>
+            </div>
+          </div>
+        );
+
+      case "centered":
+        return (
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center" style={{ padding: p, gap: g }}>
+            <div className="text-center">{renderHotelName("center")}</div>
+            <div className="text-center">{renderClock("center")}</div>
+            <div style={{ height: gap }} />
+            {renderWeather()}
+            <div className="max-w-lg w-full">{renderNews()}</div>
+          </div>
+        );
+
+      case "split":
+        return (
+          <div className="absolute inset-0 z-10 flex">
+            {/* Left: empty (photo shows through) */}
+            <div className="flex-1" />
+            {/* Right: info panel */}
+            <div 
+              className="w-[40%] flex flex-col justify-between bg-black/40 backdrop-blur-sm"
+              style={{ padding: p, gap: g }}
+            >
+              <div>
+                {renderHotelName()}
+                <div className="mt-4">{renderClock("left")}</div>
+              </div>
+              <div className="space-y-4">
+                {renderWeather()}
+                {renderNews()}
+              </div>
+            </div>
+          </div>
+        );
+
+      case "bottom-left":
+      default:
+        return (
+          <div className="absolute inset-0 z-10 flex flex-col" style={{ padding: p, gap: g }}>
+            <div className="flex justify-between items-start">
+              {renderHotelName()}
+              {renderClock()}
+            </div>
+            <div className="flex-1" />
+            <div className="flex justify-between items-end" style={{ gap: `${gap * 2}px` }}>
+              {renderWeather()}
+              <div className="max-w-lg">{renderNews()}</div>
+            </div>
+          </div>
+        );
+    }
+  };
 
   return (
     <div 
@@ -505,131 +690,15 @@ export default function LobbyDisplay() {
                   <div 
                     className="absolute inset-0"
                     style={{
-                      background: isPortrait
-                        ? "linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.1) 25%, rgba(0,0,0,0.1) 55%, rgba(0,0,0,0.55) 100%)"
-                        : "linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.1) 30%, rgba(0,0,0,0.1) 70%, rgba(0,0,0,0.5) 100%)"
+                      background: layout === "split" 
+                        ? "linear-gradient(to right, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.1) 60%, rgba(0,0,0,0.4) 100%)"
+                        : isPortrait
+                          ? "linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.1) 25%, rgba(0,0,0,0.1) 55%, rgba(0,0,0,0.55) 100%)"
+                          : "linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.1) 30%, rgba(0,0,0,0.1) 70%, rgba(0,0,0,0.5) 100%)"
                     }}
                   />
                 </div>
-
-                {/* Content Layer */}
-                <div className={`absolute inset-0 z-10 flex flex-col ${isPortrait ? 'p-6 md:p-8' : 'p-8 md:p-12 lg:p-16'}`}>
-                  {isPortrait ? (
-                    /* Portrait Layout */
-                    <>
-                      {/* Top - Hotel Name centered */}
-                      <motion.div
-                        className="text-center"
-                        initial={{ opacity: 0, y: -20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 1 }}
-                      >
-                        <h1 className={`text-2xl md:text-3xl font-light tracking-widest uppercase ${textColor}`}>
-                          {settings.hotel_name}
-                        </h1>
-                        <p className={`text-base ${isSnow ? "text-slate-600" : "text-white/60"} mt-1`}>
-                          Welcome
-                        </p>
-                      </motion.div>
-
-                      {/* Clock centered */}
-                      <motion.div
-                        className="text-center mt-4"
-                        initial={{ opacity: 0, y: -20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 1, delay: 0.2 }}
-                      >
-                        <LiveClock theme={currentTheme} isPortrait />
-                        <DateDisplay theme={currentTheme} isPortrait />
-                      </motion.div>
-
-                      <div className="flex-1" />
-
-                      {/* Bottom - Weather full width */}
-                      <motion.div
-                        className="mb-3"
-                        initial={{ opacity: 0, y: 30 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 1, delay: 0.4 }}
-                      >
-                        <WeatherWidget weather={weather} theme={currentTheme} isPortrait />
-                      </motion.div>
-
-                      {/* News full width */}
-                      <motion.div
-                        initial={{ opacity: 0, y: 30 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 1, delay: 0.6 }}
-                      >
-                        <AnimatePresence mode="wait">
-                          <motion.div
-                            key={currentHeadlineIndex}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -10 }}
-                            transition={{ duration: 0.8 }}
-                          >
-                            <NewsHeadline headline={currentHeadline} theme={currentTheme} />
-                          </motion.div>
-                        </AnimatePresence>
-                      </motion.div>
-                    </>
-                  ) : (
-                    /* Landscape Layout */
-                    <>
-                      <div className="flex justify-between items-start">
-                        <motion.div
-                          initial={{ opacity: 0, y: -20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 1 }}
-                        >
-                          <h1 className={`text-3xl md:text-4xl font-light tracking-widest uppercase ${textColor}`}>
-                            {settings.hotel_name}
-                          </h1>
-                          <p className={`text-lg ${isSnow ? "text-slate-600" : "text-white/60"} mt-1`}>
-                            Welcome
-                          </p>
-                        </motion.div>
-                        <motion.div
-                          initial={{ opacity: 0, y: -20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 1, delay: 0.2 }}
-                        >
-                          <LiveClock theme={currentTheme} />
-                          <DateDisplay theme={currentTheme} />
-                        </motion.div>
-                      </div>
-                      <div className="flex-1" />
-                      <div className="flex justify-between items-end gap-8">
-                        <motion.div
-                          initial={{ opacity: 0, x: -30 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ duration: 1, delay: 0.4 }}
-                        >
-                          <WeatherWidget weather={weather} theme={currentTheme} />
-                        </motion.div>
-                        <motion.div
-                          className="max-w-lg"
-                          initial={{ opacity: 0, x: 30 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ duration: 1, delay: 0.6 }}
-                        >
-                          <AnimatePresence mode="wait">
-                            <motion.div
-                              key={currentHeadlineIndex}
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              exit={{ opacity: 0, y: -10 }}
-                              transition={{ duration: 0.8 }}
-                            >
-                              <NewsHeadline headline={currentHeadline} theme={currentTheme} />
-                            </motion.div>
-                          </AnimatePresence>
-                        </motion.div>
-                      </div>
-                    </>
-                  )}
-                </div>
+                {renderPhotoLayout()}
               </>
             )}
           </motion.div>
