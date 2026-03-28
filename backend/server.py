@@ -52,24 +52,28 @@ class Settings(BaseModel):
     city: str = "Clifton, Texas"
     news_category: str = "general"
     photo_interval: int = 8
+    weather_slide_duration: int = 15
     weather_refresh: int = 15
     news_refresh: int = 30
     display_orientation: str = "landscape"  # landscape, portrait, or standard
     display_scale: int = 100  # 50-150 percentage
     display_width: float = 16.0  # width in inches or ratio
     display_height: float = 9.0  # height in inches or ratio
+    enable_weather_animations: bool = True
 
 class SettingsUpdate(BaseModel):
     hotel_name: Optional[str] = None
     city: Optional[str] = None
     news_category: Optional[str] = None
     photo_interval: Optional[int] = None
+    weather_slide_duration: Optional[int] = None
     weather_refresh: Optional[int] = None
     news_refresh: Optional[int] = None
     display_orientation: Optional[str] = None
     display_scale: Optional[int] = None
     display_width: Optional[float] = None
     display_height: Optional[float] = None
+    enable_weather_animations: Optional[bool] = None
 
 class HotelImage(BaseModel):
     model_config = ConfigDict(extra="ignore")

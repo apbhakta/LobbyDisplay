@@ -3,9 +3,16 @@ import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, ArrowUp, ArrowDown, Droplets, Wind, Newspaper } from "lucide-react";
 import axios from "axios";
 import WeatherBackground, { getWeatherTheme } from "../components/WeatherBackground";
+import WeatherSlide from "../components/WeatherSlide";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
+
+// Slide types
+const SLIDE_TYPES = {
+  PHOTO: 'photo',
+  WEATHER: 'weather',
+};
 
 // Glass panel component with weather-reactive styling
 const GlassPanel = ({ children, className = "", theme = "sunny" }) => {
@@ -224,12 +231,15 @@ export default function LobbyDisplay() {
     hotel_name: "Velkommen Inn",
     city: "Clifton, Texas",
     photo_interval: 8,
+    weather_slide_duration: 15,
     display_orientation: "landscape",
     display_scale: 100,
   });
   const [images, setImages] = useState([]);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [slides, setSlides] = useState([]);
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [weather, setWeather] = useState(null);
+  const [forecast, setForecast] = useState([]);
   const [headlines, setHeadlines] = useState([]);
   const [currentHeadlineIndex, setCurrentHeadlineIndex] = useState(0);
 
@@ -260,10 +270,18 @@ export default function LobbyDisplay() {
 
   const fetchWeather = useCallback(async () => {
     try {
-      const response = await axios.get(`${API}/weather`);
-      setWeather(response.data);
+      const response = await axios.get(`${API}/weather/extended`);
+      setWeather(response.data.current);
+      setForecast(response.data.forecast || []);
     } catch (error) {
       console.error("Error fetching weather:", error);
+      // Fallback to basic weather
+      try {
+        const basicResponse = await axios.get(`${API}/weather`);
+        setWeather(basicResponse.data);
+      } catch (e) {
+        console.error("Error fetching basic weather:", e);
+      }
     }
   }, []);
 
@@ -284,14 +302,52 @@ export default function LobbyDisplay() {
     fetchNews();
   }, [fetchSettings, fetchImages, fetchWeather, fetchNews]);
 
-  // Rotate images
+  // Build slides array
   useEffect(() => {
-    if (images.length === 0) return;
-    const interval = setInterval(() => {
-      setCurrentImageIndex((prev) => (prev + 1) % images.length);
-    }, settings.photo_interval * 1000);
-    return () => clearInterval(interval);
-  }, [images.length, settings.photo_interval]);
+    const newSlides = [];
+    
+    // Add photo slides
+    images.forEach((img, index) => {
+      newSlides.push({ 
+        type: SLIDE_TYPES.PHOTO, 
+        data: img, 
+        id: `photo-${index}`,
+        duration: settings.photo_interval * 1000
+      });
+    });
+    
+    // Insert weather slide after every 3 photos
+    if (newSlides.length >= 3) {
+      newSlides.splice(3, 0, { 
+        type: SLIDE_TYPES.WEATHER, 
+        id: 'weather',
+        duration: (settings.weather_slide_duration || 15) * 1000
+      });
+    } else {
+      // If less than 3 photos, add weather slide at the end
+      newSlides.push({ 
+        type: SLIDE_TYPES.WEATHER, 
+        id: 'weather',
+        duration: (settings.weather_slide_duration || 15) * 1000
+      });
+    }
+    
+    setSlides(newSlides);
+  }, [images, settings.photo_interval, settings.weather_slide_duration]);
+
+  // Rotate slides with variable duration
+  useEffect(() => {
+    if (slides.length === 0) return;
+    
+    const currentSlide = slides[currentSlideIndex];
+    const duration = currentSlide?.duration || settings.photo_interval * 1000;
+    
+    const timer = setTimeout(() => {
+      setCurrentSlideIndex((prev) => (prev + 1) % slides.length);
+    }, duration);
+    
+    return () => clearTimeout(timer);
+  }, [slides, currentSlideIndex, settings.photo_interval]);
 
   // Rotate headlines
   useEffect(() => {
@@ -314,8 +370,9 @@ export default function LobbyDisplay() {
     return () => clearInterval(interval);
   }, [fetchNews]);
 
-  const currentImage = images[currentImageIndex];
+  const currentSlide = slides[currentSlideIndex];
   const currentHeadline = headlines[currentHeadlineIndex];
+  const currentTime = useMemo(() => new Date(), [currentSlideIndex]); // Update on slide change
 
   const getImageUrl = (image) => {
     if (!image) return "";
@@ -337,115 +394,129 @@ export default function LobbyDisplay() {
       style={{ transform: `scale(${scale})`, transformOrigin: 'center' }}
       data-testid="lobby-display"
     >
-      {/* Weather-Reactive Background */}
-      <WeatherBackground 
-        condition={weather?.condition} 
-        icon={weather?.icon} 
-      />
-
-      {/* Background Image with Overlay */}
+      {/* Slide Content */}
       <AnimatePresence mode="wait">
-        {currentImage && (
+        {currentSlide && (
           <motion.div
-            key={currentImageIndex}
+            key={currentSlide.id}
             className="absolute inset-0"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 2, ease: "easeInOut" }}
           >
-            <img
-              src={getImageUrl(currentImage)}
-              alt="Hotel"
-              className="w-full h-full object-cover"
-            />
-            {/* Dark overlay for readability */}
-            <div 
-              className="absolute inset-0"
-              style={{
-                background: "linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.1) 30%, rgba(0,0,0,0.1) 70%, rgba(0,0,0,0.5) 100%)"
-              }}
-            />
+            {currentSlide.type === SLIDE_TYPES.WEATHER ? (
+              /* Weather Slide */
+              <WeatherSlide 
+                weather={weather} 
+                forecast={forecast}
+                currentTime={currentTime}
+              />
+            ) : (
+              /* Photo Slide */
+              <>
+                {/* Weather-Reactive Background */}
+                <WeatherBackground 
+                  condition={weather?.condition} 
+                  icon={weather?.icon} 
+                />
+
+                {/* Background Image with Overlay */}
+                <div className="absolute inset-0">
+                  <img
+                    src={getImageUrl(currentSlide.data)}
+                    alt="Hotel"
+                    className="w-full h-full object-cover"
+                  />
+                  <div 
+                    className="absolute inset-0"
+                    style={{
+                      background: "linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.1) 30%, rgba(0,0,0,0.1) 70%, rgba(0,0,0,0.5) 100%)"
+                    }}
+                  />
+                </div>
+
+                {/* Content Layer */}
+                <div className="absolute inset-0 z-10 flex flex-col p-8 md:p-12 lg:p-16">
+                  {/* Top Section - Clock & Hotel Name */}
+                  <div className="flex justify-between items-start">
+                    {/* Hotel Welcome */}
+                    <motion.div
+                      initial={{ opacity: 0, y: -20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 1 }}
+                    >
+                      <h1 className={`text-3xl md:text-4xl font-light tracking-widest uppercase ${textColor}`}>
+                        {settings.hotel_name}
+                      </h1>
+                      <p className={`text-lg ${isSnow ? "text-slate-600" : "text-white/60"} mt-1`}>
+                        Welcome
+                      </p>
+                    </motion.div>
+
+                    {/* Clock & Date */}
+                    <motion.div
+                      initial={{ opacity: 0, y: -20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 1, delay: 0.2 }}
+                    >
+                      <LiveClock theme={currentTheme} />
+                      <DateDisplay theme={currentTheme} />
+                    </motion.div>
+                  </div>
+
+                  {/* Spacer */}
+                  <div className="flex-1" />
+
+                  {/* Bottom Section - Weather & News */}
+                  <div className="flex justify-between items-end gap-8">
+                    {/* Weather Widget */}
+                    <motion.div
+                      initial={{ opacity: 0, x: -30 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 1, delay: 0.4 }}
+                    >
+                      <WeatherWidget weather={weather} theme={currentTheme} />
+                    </motion.div>
+
+                    {/* News Headline */}
+                    <motion.div
+                      className="max-w-lg"
+                      initial={{ opacity: 0, x: 30 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 1, delay: 0.6 }}
+                    >
+                      <AnimatePresence mode="wait">
+                        <motion.div
+                          key={currentHeadlineIndex}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          transition={{ duration: 0.8 }}
+                        >
+                          <NewsHeadline headline={currentHeadline} theme={currentTheme} />
+                        </motion.div>
+                      </AnimatePresence>
+                    </motion.div>
+                  </div>
+                </div>
+              </>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Content Layer */}
-      <div className="absolute inset-0 z-10 flex flex-col p-8 md:p-12 lg:p-16">
-        {/* Top Section - Clock & Hotel Name */}
-        <div className="flex justify-between items-start">
-          {/* Hotel Welcome */}
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1 }}
-          >
-            <h1 className={`text-3xl md:text-4xl font-light tracking-widest uppercase ${textColor}`}>
-              {settings.hotel_name}
-            </h1>
-            <p className={`text-lg ${isSnow ? "text-slate-600" : "text-white/60"} mt-1`}>
-              Welcome
-            </p>
-          </motion.div>
-
-          {/* Clock & Date */}
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1, delay: 0.2 }}
-          >
-            <LiveClock theme={currentTheme} />
-            <DateDisplay theme={currentTheme} />
-          </motion.div>
-        </div>
-
-        {/* Spacer */}
-        <div className="flex-1" />
-
-        {/* Bottom Section - Weather & News */}
-        <div className="flex justify-between items-end gap-8">
-          {/* Weather Widget */}
-          <motion.div
-            initial={{ opacity: 0, x: -30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 1, delay: 0.4 }}
-          >
-            <WeatherWidget weather={weather} theme={currentTheme} />
-          </motion.div>
-
-          {/* News Headline */}
-          <motion.div
-            className="max-w-lg"
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 1, delay: 0.6 }}
-          >
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={currentHeadlineIndex}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.8 }}
-              >
-                <NewsHeadline headline={currentHeadline} theme={currentTheme} />
-              </motion.div>
-            </AnimatePresence>
-          </motion.div>
-        </div>
-      </div>
-
       {/* Slide Indicators */}
       <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-20 flex gap-2">
-        {images.map((_, index) => (
+        {slides.map((slide, index) => (
           <motion.div
-            key={index}
+            key={slide.id}
             className={`h-1.5 rounded-full transition-all duration-500 ${
-              index === currentImageIndex 
-                ? 'bg-white w-8' 
+              index === currentSlideIndex 
+                ? slide.type === SLIDE_TYPES.WEATHER ? 'bg-blue-400 w-10' : 'bg-white w-8' 
                 : 'bg-white/40 w-1.5'
             }`}
-            animate={index === currentImageIndex ? { opacity: [0.8, 1, 0.8] } : {}}
+            animate={index === currentSlideIndex ? { opacity: [0.8, 1, 0.8] } : {}}
             transition={{ duration: 2, repeat: Infinity }}
           />
         ))}

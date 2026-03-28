@@ -240,6 +240,7 @@ export default function AdminPanel() {
     city: "Clifton, Texas",
     news_category: "general",
     photo_interval: 8,
+    weather_slide_duration: 15,
     weather_refresh: 15,
     news_refresh: 30,
     display_orientation: "landscape",
@@ -507,7 +508,7 @@ export default function AdminPanel() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid gap-6 md:grid-cols-3">
+                <div className="grid gap-6 md:grid-cols-4">
                   <div className="space-y-2">
                     <Label>Photo Interval (seconds)</Label>
                     <Input
@@ -516,6 +517,16 @@ export default function AdminPanel() {
                       max="60"
                       value={settings.photo_interval}
                       onChange={(e) => setSettings({ ...settings, photo_interval: parseInt(e.target.value) || 8 })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Weather Slide Duration (seconds)</Label>
+                    <Input
+                      type="number"
+                      min="10"
+                      max="60"
+                      value={settings.weather_slide_duration}
+                      onChange={(e) => setSettings({ ...settings, weather_slide_duration: parseInt(e.target.value) || 15 })}
                     />
                   </div>
                   <div className="space-y-2">
