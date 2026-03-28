@@ -190,11 +190,11 @@ export default function LobbyDisplay() {
     city: "Clifton, Texas",
     photo_interval: 8,
     weather_slide_duration: 15,
-    aspect_ratio: "16:9",
-    display_orientation: "landscape",
+    aspect_ratio: "4:3",
+    display_orientation: "portrait",
     display_scale: 100,
-    display_width: 16,
-    display_height: 9,
+    display_width: 7.5,
+    display_height: 10,
     widget_layout: "bottom-left",
     widget_scale: 1,
     font_scale: 1,
@@ -376,12 +376,13 @@ export default function LobbyDisplay() {
         {/* Animated weather background (behind photo) */}
         <WeatherBackground condition={weather?.condition} icon={weather?.icon} />
 
-        {/* Fullscreen photo */}
+        {/* Fullscreen photo — smart positioning for portrait */}
         {hasImage ? (
           <motion.img
             src={getImageUrl(currentSlide.data)}
             alt="Hotel"
             className="absolute inset-0 w-full h-full object-cover z-[1]"
+            style={{ objectPosition: isPortrait ? 'center 30%' : 'center center' }}
             initial={{ scale: 1.05 }}
             animate={{ scale: 1 }}
             transition={{ duration: 8, ease: "easeOut" }}
@@ -399,26 +400,30 @@ export default function LobbyDisplay() {
         {/* Overlay widgets */}
         <div className="absolute inset-0 z-[3]" style={{ padding }}>
           {isPortrait ? (
-            /* PORTRAIT overlay layout */
+            /* PORTRAIT overlay layout — similar to landscape but optimized for vertical */
             <div className="h-full flex flex-col">
-              {/* Top: Hotel name + clock centered */}
-              <div className="text-center">
-                {settings.hotel_name && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.8 }}
-                  >
-                    <h1 className="text-2xl font-serif font-bold text-white tracking-widest uppercase drop-shadow-lg">
-                      {settings.hotel_name}
-                    </h1>
-                  </motion.div>
-                )}
+              {/* Top: Hotel name (left) + Clock (right) */}
+              <div className="flex justify-between items-start">
                 <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.8, delay: 0.2 }}
-                  className="mt-2"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.8 }}
+                >
+                  {settings.hotel_name && (
+                    <div>
+                      <h1 className="text-xl font-serif font-bold text-white tracking-[0.2em] uppercase drop-shadow-lg">
+                        {settings.hotel_name}
+                      </h1>
+                      <p className="text-white/60 text-xs tracking-wider mt-0.5">Welcome</p>
+                    </div>
+                  )}
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.8 }}
+                  className="text-right"
                 >
                   <LiveClock theme={currentTheme} size="compact" />
                   <DateDisplay theme={currentTheme} />
@@ -427,8 +432,8 @@ export default function LobbyDisplay() {
 
               <div className="flex-1" />
 
-              {/* Bottom: Weather + News stacked */}
-              <div className="space-y-3" style={{ transform: `scale(${wScale})`, transformOrigin: 'bottom center' }}>
+              {/* Bottom: Weather + News stacked (full width) */}
+              <div className="space-y-3" style={{ transform: `scale(${wScale})`, transformOrigin: 'bottom left' }}>
                 <WeatherWidget weather={weather} theme={currentTheme} />
                 <AnimatePresence mode="wait">
                   <motion.div

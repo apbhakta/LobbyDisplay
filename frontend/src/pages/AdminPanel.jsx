@@ -438,11 +438,11 @@ export default function AdminPanel() {
     weather_slide_duration: 15,
     weather_refresh: 15,
     news_refresh: 30,
-    aspect_ratio: "16:9",
-    display_orientation: "landscape",
+    aspect_ratio: "4:3",
+    display_orientation: "portrait",
     display_scale: 100,
-    display_width: 16,
-    display_height: 9,
+    display_width: 7.5,
+    display_height: 10,
     enable_weather_animations: true,
   });
   const [images, setImages] = useState([]);
