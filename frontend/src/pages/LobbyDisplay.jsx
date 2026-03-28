@@ -52,6 +52,8 @@ export default function LobbyDisplay() {
     photo_interval: 8,
     display_orientation: "landscape",
     display_scale: 100,
+    display_width: 16,
+    display_height: 9,
   });
   const [images, setImages] = useState([]);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
@@ -221,7 +223,21 @@ export default function LobbyDisplay() {
 
   // Calculate display styles based on orientation and scale
   const isPortrait = settings.display_orientation === "portrait";
+  const isStandard = settings.display_orientation === "standard";
   const scale = settings.display_scale / 100;
+  
+  // Calculate aspect ratio for standard mode (4:3 = 7.5" x 10")
+  const getAspectRatioStyle = () => {
+    if (isStandard) {
+      return {
+        aspectRatio: `${settings.display_width} / ${settings.display_height}`,
+        maxWidth: '100vw',
+        maxHeight: '100vh',
+        margin: '0 auto',
+      };
+    }
+    return {};
+  };
 
   // Get image URL
   const getImageUrl = (image) => {
@@ -383,8 +399,8 @@ export default function LobbyDisplay() {
 
   return (
     <div 
-      className={`lobby-display relative overflow-hidden bg-black ${
-        isPortrait ? "w-screen h-screen" : "w-screen h-screen"
+      className={`lobby-display relative overflow-hidden bg-black flex items-center justify-center ${
+        isStandard ? "w-screen h-screen" : "w-screen h-screen"
       }`}
       style={{
         transform: `scale(${scale})`,
@@ -393,20 +409,15 @@ export default function LobbyDisplay() {
       data-testid="lobby-display"
       data-orientation={settings.display_orientation}
     >
-      {/* Portrait mode wrapper - rotates content 90 degrees */}
-      <div 
-        className={`${
-          isPortrait 
-            ? "absolute inset-0 flex items-center justify-center"
-            : "w-full h-full"
-        }`}
-      >
+      {/* Standard 4:3 mode wrapper */}
+      {isStandard ? (
         <div 
-          className={`${
-            isPortrait 
-              ? "w-[100vh] h-[100vw] origin-center rotate-90"
-              : "w-full h-full"
-          }`}
+          className="relative overflow-hidden bg-black"
+          style={{
+            width: 'min(100vw, calc(100vh * 0.75))',
+            height: 'min(100vh, calc(100vw / 0.75))',
+            aspectRatio: '3 / 4',
+          }}
         >
           {/* Slide Content with Crossfade */}
           <AnimatePresence mode="wait">
@@ -425,11 +436,7 @@ export default function LobbyDisplay() {
           </AnimatePresence>
 
           {/* Slide Indicator */}
-          <div className={`absolute z-30 flex gap-2 ${
-            isPortrait 
-              ? "bottom-6 left-1/2 transform -translate-x-1/2" 
-              : "bottom-6 left-1/2 transform -translate-x-1/2"
-          }`}>
+          <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-30 flex gap-2">
             {slides.map((slide, index) => (
               <div
                 key={slide.id}
@@ -442,7 +449,58 @@ export default function LobbyDisplay() {
             ))}
           </div>
         </div>
-      </div>
+      ) : (
+        /* Portrait/Landscape mode wrapper */
+        <div 
+          className={`${
+            isPortrait 
+              ? "absolute inset-0 flex items-center justify-center"
+              : "w-full h-full"
+          }`}
+        >
+          <div 
+            className={`${
+              isPortrait 
+                ? "w-[100vh] h-[100vw] origin-center rotate-90"
+                : "w-full h-full"
+            }`}
+          >
+            {/* Slide Content with Crossfade */}
+            <AnimatePresence mode="wait">
+              {currentSlide && (
+                <motion.div
+                  key={currentSlide.id}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 2, ease: "easeInOut" }}
+                  className="absolute inset-0"
+                >
+                  {renderSlide(currentSlide)}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Slide Indicator */}
+            <div className={`absolute z-30 flex gap-2 ${
+              isPortrait 
+                ? "bottom-6 left-1/2 transform -translate-x-1/2" 
+                : "bottom-6 left-1/2 transform -translate-x-1/2"
+            }`}>
+              {slides.map((slide, index) => (
+                <div
+                  key={slide.id}
+                  className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                    index === currentSlideIndex 
+                      ? 'bg-white w-6' 
+                      : 'bg-white/40'
+                  }`}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

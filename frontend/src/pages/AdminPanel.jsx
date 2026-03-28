@@ -57,6 +57,8 @@ export default function AdminPanel() {
     news_refresh: 30,
     display_orientation: "landscape",
     display_scale: 100,
+    display_width: 16,
+    display_height: 9,
   });
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -342,10 +344,10 @@ export default function AdminPanel() {
               <CardContent className="space-y-6">
                 {/* Orientation Selection */}
                 <div className="space-y-3">
-                  <Label>Screen Orientation</Label>
-                  <div className="grid grid-cols-2 gap-4">
+                  <Label>Screen Orientation & Size</Label>
+                  <div className="grid grid-cols-3 gap-4">
                     <button
-                      onClick={() => setSettings({ ...settings, display_orientation: "landscape" })}
+                      onClick={() => setSettings({ ...settings, display_orientation: "landscape", display_width: 16, display_height: 9 })}
                       className={`flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all ${
                         settings.display_orientation === "landscape"
                           ? "border-primary bg-primary/10"
@@ -360,7 +362,7 @@ export default function AdminPanel() {
                       <span className="text-xs text-muted-foreground">16:9 Horizontal</span>
                     </button>
                     <button
-                      onClick={() => setSettings({ ...settings, display_orientation: "portrait" })}
+                      onClick={() => setSettings({ ...settings, display_orientation: "portrait", display_width: 9, display_height: 16 })}
                       className={`flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all ${
                         settings.display_orientation === "portrait"
                           ? "border-primary bg-primary/10"
@@ -373,6 +375,21 @@ export default function AdminPanel() {
                       </div>
                       <span className="text-sm font-medium">Portrait</span>
                       <span className="text-xs text-muted-foreground">9:16 Vertical</span>
+                    </button>
+                    <button
+                      onClick={() => setSettings({ ...settings, display_orientation: "standard", display_width: 7.5, display_height: 10 })}
+                      className={`flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all ${
+                        settings.display_orientation === "standard"
+                          ? "border-primary bg-primary/10"
+                          : "border-white/10 hover:border-white/20"
+                      }`}
+                      data-testid="orientation-standard"
+                    >
+                      <div className="w-16 h-20 rounded-lg border-2 border-current flex items-center justify-center">
+                        <Monitor className="w-6 h-6" />
+                      </div>
+                      <span className="text-sm font-medium">Standard</span>
+                      <span className="text-xs text-muted-foreground">4:3 (7.5" × 10")</span>
                     </button>
                   </div>
                 </div>
@@ -409,17 +426,25 @@ export default function AdminPanel() {
                   <p className="text-sm text-muted-foreground mb-3">Preview</p>
                   <div className="flex justify-center">
                     <div 
-                      className={`bg-gradient-to-br from-slate-700 to-slate-900 rounded-lg flex items-center justify-center text-white/50 text-xs transition-all ${
+                      className={`bg-gradient-to-br from-slate-700 to-slate-900 rounded-lg flex flex-col items-center justify-center text-white/50 text-xs transition-all ${
                         settings.display_orientation === "landscape" 
                           ? "w-32 h-20" 
-                          : "w-20 h-32"
+                          : settings.display_orientation === "portrait"
+                          ? "w-20 h-32"
+                          : "w-24 h-28"
                       }`}
                       style={{ 
                         transform: `scale(${settings.display_scale / 100})`,
                         transformOrigin: 'center'
                       }}
                     >
-                      {settings.display_orientation === "landscape" ? "16:9" : "9:16"}
+                      <span>
+                        {settings.display_orientation === "landscape" ? "16:9" : 
+                         settings.display_orientation === "portrait" ? "9:16" : "4:3"}
+                      </span>
+                      {settings.display_orientation === "standard" && (
+                        <span className="text-[10px] mt-1">7.5" × 10"</span>
+                      )}
                     </div>
                   </div>
                 </div>

@@ -54,8 +54,10 @@ class Settings(BaseModel):
     photo_interval: int = 8
     weather_refresh: int = 15
     news_refresh: int = 30
-    display_orientation: str = "landscape"  # landscape or portrait
+    display_orientation: str = "landscape"  # landscape, portrait, or standard
     display_scale: int = 100  # 50-150 percentage
+    display_width: float = 16.0  # width in inches or ratio
+    display_height: float = 9.0  # height in inches or ratio
 
 class SettingsUpdate(BaseModel):
     hotel_name: Optional[str] = None
@@ -66,6 +68,8 @@ class SettingsUpdate(BaseModel):
     news_refresh: Optional[int] = None
     display_orientation: Optional[str] = None
     display_scale: Optional[int] = None
+    display_width: Optional[float] = None
+    display_height: Optional[float] = None
 
 class HotelImage(BaseModel):
     model_config = ConfigDict(extra="ignore")

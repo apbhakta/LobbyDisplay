@@ -102,6 +102,51 @@ class HotelLobbyAPITester:
             print(f"   News category: {settings.get('news_category', 'N/A')}")
             print(f"   Display orientation: {settings.get('display_orientation', 'N/A')}")
             print(f"   Display scale: {settings.get('display_scale', 'N/A')}%")
+            print(f"   Display width: {settings.get('display_width', 'N/A')}")
+            print(f"   Display height: {settings.get('display_height', 'N/A')}")
+
+        # Test landscape orientation (16:9)
+        landscape_data = {
+            "display_orientation": "landscape",
+            "display_width": 16.0,
+            "display_height": 9.0,
+            "display_scale": 100
+        }
+        success, updated = self.run_test("Test Landscape Orientation", "PUT", "settings", 200, landscape_data)
+        if success:
+            print(f"   Landscape - Width: {updated.get('display_width', 'N/A')}, Height: {updated.get('display_height', 'N/A')}")
+            assert updated.get('display_orientation') == 'landscape', "Landscape orientation not set correctly"
+            assert updated.get('display_width') == 16.0, "Landscape width not set correctly"
+            assert updated.get('display_height') == 9.0, "Landscape height not set correctly"
+
+        # Test portrait orientation (9:16)
+        portrait_data = {
+            "display_orientation": "portrait",
+            "display_width": 9.0,
+            "display_height": 16.0,
+            "display_scale": 100
+        }
+        success, updated = self.run_test("Test Portrait Orientation", "PUT", "settings", 200, portrait_data)
+        if success:
+            print(f"   Portrait - Width: {updated.get('display_width', 'N/A')}, Height: {updated.get('display_height', 'N/A')}")
+            assert updated.get('display_orientation') == 'portrait', "Portrait orientation not set correctly"
+            assert updated.get('display_width') == 9.0, "Portrait width not set correctly"
+            assert updated.get('display_height') == 16.0, "Portrait height not set correctly"
+
+        # Test standard orientation (4:3 - 7.5" x 10")
+        standard_data = {
+            "display_orientation": "standard",
+            "display_width": 7.5,
+            "display_height": 10.0,
+            "display_scale": 100
+        }
+        success, updated = self.run_test("Test Standard 4:3 Orientation", "PUT", "settings", 200, standard_data)
+        if success:
+            print(f"   Standard - Width: {updated.get('display_width', 'N/A')}, Height: {updated.get('display_height', 'N/A')}")
+            assert updated.get('display_orientation') == 'standard', "Standard orientation not set correctly"
+            assert updated.get('display_width') == 7.5, "Standard width not set correctly (should be 7.5)"
+            assert updated.get('display_height') == 10.0, "Standard height not set correctly (should be 10.0)"
+            print("   ✅ Standard 4:3 display option working correctly!")
 
         # Update settings including display settings
         update_data = {
@@ -123,7 +168,9 @@ class HotelLobbyAPITester:
                 "hotel_name": settings.get('hotel_name', 'Velkommen Inn'),
                 "city": settings.get('city', 'Clifton, Texas'),
                 "display_orientation": settings.get('display_orientation', 'landscape'),
-                "display_scale": settings.get('display_scale', 100)
+                "display_scale": settings.get('display_scale', 100),
+                "display_width": settings.get('display_width', 16.0),
+                "display_height": settings.get('display_height', 9.0)
             }
             self.run_test("Restore Settings", "PUT", "settings", 200, restore_data)
 
