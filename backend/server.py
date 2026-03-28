@@ -77,7 +77,26 @@ class WeatherData(BaseModel):
     condition: str
     icon: str
     city: str
+    humidity: int = 50
+    wind_speed: float = 0
+    visibility: float = 10
+    sunrise: str = "6:00 AM"
+    sunset: str = "6:00 PM"
+    uv_index: int = 0
+    air_quality: int = 50
     is_fallback: bool = False
+
+class ForecastDay(BaseModel):
+    day: str
+    temp_min: float
+    temp_max: float
+    condition: str
+    icon: str
+
+class ExtendedWeatherData(BaseModel):
+    current: WeatherData
+    forecast: List[ForecastDay] = []
+    hourly: List[dict] = []
 
 class NewsHeadline(BaseModel):
     title: str
@@ -127,8 +146,25 @@ FALLBACK_WEATHER = {
     "condition": "Partly Cloudy",
     "icon": "02d",
     "city": "Clifton, Texas",
+    "humidity": 45,
+    "wind_speed": 8.5,
+    "visibility": 10,
+    "sunrise": "6:35 AM",
+    "sunset": "7:42 PM",
+    "uv_index": 6,
+    "air_quality": 42,
     "is_fallback": True
 }
+
+FALLBACK_FORECAST = [
+    {"day": "Monday", "temp_min": 62, "temp_max": 75, "condition": "Sunny", "icon": "01d"},
+    {"day": "Tuesday", "temp_min": 64, "temp_max": 78, "condition": "Sunny", "icon": "01d"},
+    {"day": "Wednesday", "temp_min": 60, "temp_max": 72, "condition": "Cloudy", "icon": "03d"},
+    {"day": "Thursday", "temp_min": 58, "temp_max": 68, "condition": "Rain", "icon": "10d"},
+    {"day": "Friday", "temp_min": 55, "temp_max": 70, "condition": "Partly Cloudy", "icon": "02d"},
+    {"day": "Saturday", "temp_min": 60, "temp_max": 74, "condition": "Cloudy", "icon": "04d"},
+    {"day": "Sunday", "temp_min": 62, "temp_max": 76, "condition": "Windy", "icon": "50d"},
+]
 
 FALLBACK_HEADLINES = [
     {"title": "Welcome to Velkommen Inn — Where Comfort Meets Elegance", "source": "Hotel News", "url": "#", "is_fallback": True},
@@ -263,6 +299,12 @@ async def get_weather(city: Optional[str] = None):
             
             if response.status_code == 200:
                 data = response.json()
+                # Convert Unix timestamps to readable time
+                sunrise_ts = data.get("sys", {}).get("sunrise", 0)
+                sunset_ts = data.get("sys", {}).get("sunset", 0)
+                sunrise_time = datetime.fromtimestamp(sunrise_ts).strftime("%I:%M %p") if sunrise_ts else "6:00 AM"
+                sunset_time = datetime.fromtimestamp(sunset_ts).strftime("%I:%M %p") if sunset_ts else "6:00 PM"
+                
                 weather_data = {
                     "temp": round(data["main"]["temp"]),
                     "temp_min": round(data["main"]["temp_min"]),
@@ -270,6 +312,13 @@ async def get_weather(city: Optional[str] = None):
                     "condition": data["weather"][0]["description"].title(),
                     "icon": data["weather"][0]["icon"],
                     "city": data["name"],
+                    "humidity": data["main"].get("humidity", 50),
+                    "wind_speed": round(data.get("wind", {}).get("speed", 0), 1),
+                    "visibility": round(data.get("visibility", 10000) / 1000, 1),
+                    "sunrise": sunrise_time,
+                    "sunset": sunset_time,
+                    "uv_index": 5,  # UV index requires separate API call
+                    "air_quality": 42,  # Air quality requires separate API call
                     "is_fallback": False
                 }
                 weather_cache["data"] = weather_data
@@ -289,6 +338,85 @@ async def get_weather(city: Optional[str] = None):
         fallback = FALLBACK_WEATHER.copy()
         fallback["city"] = city
         return WeatherData(**fallback)
+
+@api_router.get("/weather/extended", response_model=ExtendedWeatherData)
+async def get_extended_weather(city: Optional[str] = None):
+    """Get extended weather including forecast"""
+    # Get current weather
+    current = await get_weather(city)
+    
+    # Get city from settings if not provided
+    if not city:
+        settings = await db.settings.find_one({"id": "hotel_settings"}, {"_id": 0})
+        city = settings.get("city", "Clifton, Texas") if settings else "Clifton, Texas"
+    
+    forecast = []
+    hourly = []
+    
+    if not OPENWEATHER_API_KEY:
+        # Return fallback forecast
+        return ExtendedWeatherData(
+            current=current,
+            forecast=[ForecastDay(**f) for f in FALLBACK_FORECAST],
+            hourly=[]
+        )
+    
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            # Get 5-day forecast
+            response = await client.get(
+                "https://api.openweathermap.org/data/2.5/forecast",
+                params={
+                    "q": city,
+                    "appid": OPENWEATHER_API_KEY,
+                    "units": "imperial"
+                }
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                # Process hourly data (next 24 hours, every 3 hours)
+                for item in data.get("list", [])[:8]:
+                    dt = datetime.fromtimestamp(item["dt"])
+                    hourly.append({
+                        "time": dt.strftime("%I %p"),
+                        "temp": round(item["main"]["temp"])
+                    })
+                
+                # Process daily forecast (group by day)
+                daily_data = {}
+                for item in data.get("list", []):
+                    dt = datetime.fromtimestamp(item["dt"])
+                    day_name = dt.strftime("%A")
+                    if day_name not in daily_data:
+                        daily_data[day_name] = {
+                            "day": day_name,
+                            "temps": [],
+                            "condition": item["weather"][0]["description"].title(),
+                            "icon": item["weather"][0]["icon"]
+                        }
+                    daily_data[day_name]["temps"].append(item["main"]["temp"])
+                
+                # Calculate min/max for each day
+                for day_name, day_info in list(daily_data.items())[:7]:
+                    forecast.append(ForecastDay(
+                        day=day_name,
+                        temp_min=round(min(day_info["temps"])),
+                        temp_max=round(max(day_info["temps"])),
+                        condition=day_info["condition"],
+                        icon=day_info["icon"]
+                    ))
+                    
+    except Exception as e:
+        logger.error(f"Forecast fetch failed: {e}")
+        forecast = [ForecastDay(**f) for f in FALLBACK_FORECAST]
+    
+    return ExtendedWeatherData(
+        current=current,
+        forecast=forecast if forecast else [ForecastDay(**f) for f in FALLBACK_FORECAST],
+        hourly=hourly
+    )
 
 # ===== News Endpoint =====
 

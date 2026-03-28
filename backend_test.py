@@ -147,6 +147,29 @@ class HotelLobbyAPITester:
             print(f"   High/Low: {weather.get('temp_max', 'N/A')}°/{weather.get('temp_min', 'N/A')}°")
             print(f"   Is fallback: {weather.get('is_fallback', False)}")
 
+    def test_extended_weather_endpoint(self):
+        """Test extended weather API with forecast"""
+        print("\n=== Testing Extended Weather Endpoint ===")
+        
+        success, extended = self.run_test("Get Extended Weather", "GET", "weather/extended", 200)
+        if success:
+            current = extended.get('current', {})
+            forecast = extended.get('forecast', [])
+            hourly = extended.get('hourly', [])
+            
+            print(f"   Current temp: {current.get('temp', 'N/A')}°F")
+            print(f"   Current condition: {current.get('condition', 'N/A')}")
+            print(f"   Forecast days: {len(forecast)}")
+            print(f"   Hourly data points: {len(hourly)}")
+            
+            if forecast:
+                first_day = forecast[0]
+                print(f"   First forecast: {first_day.get('day', 'N/A')} - {first_day.get('temp_min', 'N/A')}°/{first_day.get('temp_max', 'N/A')}°")
+            
+            if hourly:
+                first_hour = hourly[0]
+                print(f"   First hourly: {first_hour.get('time', 'N/A')} - {first_hour.get('temp', 'N/A')}°")
+
     def test_news_endpoint(self):
         """Test news API"""
         print("\n=== Testing News Endpoint ===")
@@ -171,6 +194,7 @@ class HotelLobbyAPITester:
         self.test_settings_endpoints()
         self.test_images_endpoints()
         self.test_weather_endpoint()
+        self.test_extended_weather_endpoint()
         self.test_news_endpoint()
 
         # Print summary

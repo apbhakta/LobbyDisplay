@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Cloud, Sun, CloudRain, CloudSnow, CloudLightning, Wind, Droplets, Thermometer } from "lucide-react";
+import { Cloud, Sun, CloudRain, CloudSnow, CloudLightning, Wind, Thermometer } from "lucide-react";
 import axios from "axios";
+import WeatherDashboardSlide from "../components/WeatherDashboardSlide";
+import WeatherForecastSlide from "../components/WeatherForecastSlide";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -31,6 +33,13 @@ const getWeatherIcon = (iconCode) => {
   return iconMap[iconCode] || Cloud;
 };
 
+// Slide types
+const SLIDE_TYPES = {
+  PHOTO: 'photo',
+  WEATHER_DASHBOARD: 'weather_dashboard',
+  WEATHER_FORECAST: 'weather_forecast'
+};
+
 export default function LobbyDisplay() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [settings, setSettings] = useState({
@@ -39,10 +48,15 @@ export default function LobbyDisplay() {
     photo_interval: 8,
   });
   const [images, setImages] = useState([]);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [weather, setWeather] = useState(null);
+  const [forecast, setForecast] = useState([]);
+  const [hourly, setHourly] = useState([]);
   const [headlines, setHeadlines] = useState([]);
   const [currentHeadlineIndex, setCurrentHeadlineIndex] = useState(0);
+  
+  // Build the complete slide sequence
+  const [slides, setSlides] = useState([]);
 
   // Fetch settings
   const fetchSettings = useCallback(async () => {
@@ -64,13 +78,22 @@ export default function LobbyDisplay() {
     }
   }, []);
 
-  // Fetch weather
+  // Fetch extended weather (includes forecast)
   const fetchWeather = useCallback(async () => {
     try {
-      const response = await axios.get(`${API}/weather`);
-      setWeather(response.data);
+      const response = await axios.get(`${API}/weather/extended`);
+      setWeather(response.data.current);
+      setForecast(response.data.forecast || []);
+      setHourly(response.data.hourly || []);
     } catch (error) {
       console.error("Error fetching weather:", error);
+      // Fallback to basic weather
+      try {
+        const basicResponse = await axios.get(`${API}/weather`);
+        setWeather(basicResponse.data);
+      } catch (e) {
+        console.error("Error fetching basic weather:", e);
+      }
     }
   }, []);
 
@@ -92,6 +115,32 @@ export default function LobbyDisplay() {
     fetchNews();
   }, [fetchSettings, fetchImages, fetchWeather, fetchNews]);
 
+  // Build slides array when images change
+  useEffect(() => {
+    const newSlides = [];
+    
+    // Add photo slides
+    images.forEach((img, index) => {
+      newSlides.push({ type: SLIDE_TYPES.PHOTO, data: img, id: `photo-${index}` });
+    });
+    
+    // Insert weather dashboard after every 2 photos (or at position 2)
+    if (newSlides.length >= 2) {
+      newSlides.splice(2, 0, { type: SLIDE_TYPES.WEATHER_DASHBOARD, id: 'weather-dashboard' });
+    } else {
+      newSlides.push({ type: SLIDE_TYPES.WEATHER_DASHBOARD, id: 'weather-dashboard' });
+    }
+    
+    // Insert weather forecast after every 2 more photos (or at position 5)
+    if (newSlides.length >= 5) {
+      newSlides.splice(5, 0, { type: SLIDE_TYPES.WEATHER_FORECAST, id: 'weather-forecast' });
+    } else {
+      newSlides.push({ type: SLIDE_TYPES.WEATHER_FORECAST, id: 'weather-forecast' });
+    }
+    
+    setSlides(newSlides);
+  }, [images]);
+
   // Update clock every second
   useEffect(() => {
     const timer = setInterval(() => {
@@ -100,14 +149,14 @@ export default function LobbyDisplay() {
     return () => clearInterval(timer);
   }, []);
 
-  // Rotate images
+  // Rotate slides
   useEffect(() => {
-    if (images.length === 0) return;
+    if (slides.length === 0) return;
     const interval = setInterval(() => {
-      setCurrentImageIndex((prev) => (prev + 1) % images.length);
+      setCurrentSlideIndex((prev) => (prev + 1) % slides.length);
     }, settings.photo_interval * 1000);
     return () => clearInterval(interval);
-  }, [images.length, settings.photo_interval]);
+  }, [slides.length, settings.photo_interval]);
 
   // Rotate headlines every 15 seconds
   useEffect(() => {
@@ -148,7 +197,7 @@ export default function LobbyDisplay() {
   const time = formatTime(currentTime);
   const WeatherIcon = weather ? getWeatherIcon(weather.icon) : Cloud;
   const currentHeadline = headlines[currentHeadlineIndex];
-  const currentImage = images[currentImageIndex];
+  const currentSlide = slides[currentSlideIndex];
 
   // Get image URL
   const getImageUrl = (image) => {
@@ -157,127 +206,175 @@ export default function LobbyDisplay() {
     return `${BACKEND_URL}${image.url}`;
   };
 
+  // Render slide based on type
+  const renderSlide = (slide) => {
+    if (!slide) return null;
+
+    switch (slide.type) {
+      case SLIDE_TYPES.WEATHER_DASHBOARD:
+        return (
+          <WeatherDashboardSlide 
+            weather={weather} 
+            hourly={hourly}
+            currentTime={currentTime}
+          />
+        );
+      
+      case SLIDE_TYPES.WEATHER_FORECAST:
+        return (
+          <WeatherForecastSlide 
+            weather={weather} 
+            forecast={forecast}
+            currentTime={currentTime}
+          />
+        );
+      
+      case SLIDE_TYPES.PHOTO:
+      default:
+        return (
+          <>
+            {/* Background Image */}
+            <img
+              src={getImageUrl(slide.data)}
+              alt="Hotel"
+              className="w-full h-full object-cover"
+              data-testid="background-image"
+            />
+            
+            {/* Gradient Overlay */}
+            <div className="gradient-overlay absolute inset-0" />
+
+            {/* Content Layer */}
+            <div className="absolute inset-0 z-20 h-full w-full p-12 md:p-16 lg:p-24 flex flex-col justify-between">
+              {/* Top Row */}
+              <div className="flex justify-between items-start">
+                {/* Hotel Name - Top Left */}
+                <div className="flex flex-col items-start">
+                  <h1 
+                    className="font-serif text-4xl lg:text-5xl font-semibold tracking-widest uppercase text-white text-shadow-strong"
+                    data-testid="hotel-name-display"
+                  >
+                    {settings.hotel_name}
+                  </h1>
+                </div>
+
+                {/* Clock and Date - Top Right */}
+                <div className="flex flex-col items-end text-right">
+                  <div 
+                    className="font-serif text-[6rem] lg:text-[10rem] font-light tracking-tighter leading-none text-white text-shadow-strong"
+                    data-testid="clock-display"
+                  >
+                    <span>{time.hours}</span>
+                    <span className="clock-separator">:</span>
+                    <span>{time.minutes}</span>
+                    <span className="text-3xl lg:text-4xl ml-4 font-sans font-light text-white/80">{time.ampm}</span>
+                  </div>
+                  <p 
+                    className="text-xl lg:text-2xl font-light tracking-widest uppercase text-white/80 font-sans mt-2 text-shadow"
+                    data-testid="date-display"
+                  >
+                    {formatDate(currentTime)}
+                  </p>
+                </div>
+              </div>
+
+              {/* Bottom Row */}
+              <div className="flex justify-between items-end">
+                {/* Weather Widget - Bottom Left */}
+                {weather && (
+                  <div 
+                    className="flex items-center gap-6"
+                    data-testid="weather-widget"
+                  >
+                    <WeatherIcon 
+                      className="w-16 h-16 lg:w-24 lg:h-24 text-white weather-icon" 
+                      strokeWidth={1.5}
+                    />
+                    <div className="flex flex-col">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-5xl lg:text-7xl font-light font-sans text-white text-shadow-strong">
+                          {Math.round(weather.temp)}°
+                        </span>
+                        <span className="text-2xl font-light text-white/70">F</span>
+                      </div>
+                      <p className="text-lg lg:text-xl font-light uppercase tracking-widest text-white/70 font-sans">
+                        {weather.condition}
+                      </p>
+                      <div className="flex items-center gap-4 mt-1 text-sm lg:text-base text-white/60 font-sans">
+                        <span className="flex items-center gap-1">
+                          <Thermometer className="w-4 h-4" />
+                          H: {Math.round(weather.temp_max)}°
+                        </span>
+                        <span className="flex items-center gap-1">
+                          L: {Math.round(weather.temp_min)}°
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* News Headline - Bottom Right */}
+                <div className="max-w-2xl text-right flex flex-col items-end gap-2">
+                  <AnimatePresence mode="wait">
+                    {currentHeadline && (
+                      <motion.div
+                        key={currentHeadlineIndex}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 1 }}
+                        data-testid="news-headline"
+                      >
+                        <p className="font-serif text-xl lg:text-2xl font-light leading-relaxed text-white/90 italic text-shadow">
+                          "{currentHeadline.title}"
+                        </p>
+                        <p className="text-sm lg:text-base font-sans text-white/50 mt-2 uppercase tracking-wider">
+                          — {currentHeadline.source}
+                        </p>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </div>
+            </div>
+          </>
+        );
+    }
+  };
+
   return (
     <div 
       className="lobby-display relative w-screen h-screen overflow-hidden bg-black"
       data-testid="lobby-display"
     >
-      {/* Background Image with Crossfade */}
+      {/* Slide Content with Crossfade */}
       <AnimatePresence mode="wait">
-        {currentImage && (
+        {currentSlide && (
           <motion.div
-            key={currentImageIndex}
+            key={currentSlide.id}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 2, ease: "easeInOut" }}
             className="absolute inset-0"
           >
-            <img
-              src={getImageUrl(currentImage)}
-              alt="Hotel"
-              className="w-full h-full object-cover"
-              data-testid="background-image"
-            />
+            {renderSlide(currentSlide)}
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Gradient Overlay */}
-      <div className="gradient-overlay absolute inset-0 z-10" />
-
-      {/* Content Layer */}
-      <div className="relative z-20 h-full w-full p-12 md:p-16 lg:p-24 flex flex-col justify-between">
-        {/* Top Row */}
-        <div className="flex justify-between items-start">
-          {/* Hotel Name - Top Left */}
-          <div className="flex flex-col items-start">
-            <h1 
-              className="font-serif text-4xl lg:text-5xl font-semibold tracking-widest uppercase text-white text-shadow-strong"
-              data-testid="hotel-name-display"
-            >
-              {settings.hotel_name}
-            </h1>
-          </div>
-
-          {/* Clock and Date - Top Right */}
-          <div className="flex flex-col items-end text-right">
-            <div 
-              className="font-serif text-[6rem] lg:text-[10rem] font-light tracking-tighter leading-none text-white text-shadow-strong"
-              data-testid="clock-display"
-            >
-              <span>{time.hours}</span>
-              <span className="clock-separator">:</span>
-              <span>{time.minutes}</span>
-              <span className="text-3xl lg:text-4xl ml-4 font-sans font-light text-white/80">{time.ampm}</span>
-            </div>
-            <p 
-              className="text-xl lg:text-2xl font-light tracking-widest uppercase text-white/80 font-sans mt-2 text-shadow"
-              data-testid="date-display"
-            >
-              {formatDate(currentTime)}
-            </p>
-          </div>
-        </div>
-
-        {/* Bottom Row */}
-        <div className="flex justify-between items-end">
-          {/* Weather Widget - Bottom Left */}
-          {weather && (
-            <div 
-              className="flex items-center gap-6"
-              data-testid="weather-widget"
-            >
-              <WeatherIcon 
-                className="w-16 h-16 lg:w-24 lg:h-24 text-white weather-icon" 
-                strokeWidth={1.5}
-              />
-              <div className="flex flex-col">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-5xl lg:text-7xl font-light font-sans text-white text-shadow-strong">
-                    {Math.round(weather.temp)}°
-                  </span>
-                  <span className="text-2xl font-light text-white/70">F</span>
-                </div>
-                <p className="text-lg lg:text-xl font-light uppercase tracking-widest text-white/70 font-sans">
-                  {weather.condition}
-                </p>
-                <div className="flex items-center gap-4 mt-1 text-sm lg:text-base text-white/60 font-sans">
-                  <span className="flex items-center gap-1">
-                    <Thermometer className="w-4 h-4" />
-                    H: {Math.round(weather.temp_max)}°
-                  </span>
-                  <span className="flex items-center gap-1">
-                    L: {Math.round(weather.temp_min)}°
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* News Headline - Bottom Right */}
-          <div className="max-w-2xl text-right flex flex-col items-end gap-2">
-            <AnimatePresence mode="wait">
-              {currentHeadline && (
-                <motion.div
-                  key={currentHeadlineIndex}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 1 }}
-                  data-testid="news-headline"
-                >
-                  <p className="font-serif text-xl lg:text-2xl font-light leading-relaxed text-white/90 italic text-shadow">
-                    "{currentHeadline.title}"
-                  </p>
-                  <p className="text-sm lg:text-base font-sans text-white/50 mt-2 uppercase tracking-wider">
-                    — {currentHeadline.source}
-                  </p>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </div>
+      {/* Slide Indicator */}
+      <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-30 flex gap-2">
+        {slides.map((slide, index) => (
+          <div
+            key={slide.id}
+            className={`w-2 h-2 rounded-full transition-all duration-300 ${
+              index === currentSlideIndex 
+                ? 'bg-white w-6' 
+                : 'bg-white/40'
+            }`}
+          />
+        ))}
       </div>
     </div>
   );
