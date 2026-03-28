@@ -2,8 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Cloud, Sun, CloudRain, CloudSnow, CloudLightning, Wind, Thermometer } from "lucide-react";
 import axios from "axios";
-import WeatherDashboardSlide from "../components/WeatherDashboardSlide";
-import WeatherForecastSlide from "../components/WeatherForecastSlide";
+import WeatherSlide from "../components/WeatherSlide";
 import LocalAttractionsSlide from "../components/LocalAttractionsSlide";
 import EventsSlide from "../components/EventsSlide";
 
@@ -38,8 +37,7 @@ const getWeatherIcon = (iconCode) => {
 // Slide types
 const SLIDE_TYPES = {
   PHOTO: 'photo',
-  WEATHER_DASHBOARD: 'weather_dashboard',
-  WEATHER_FORECAST: 'weather_forecast',
+  WEATHER: 'weather',
   LOCAL_ATTRACTIONS: 'local_attractions',
   EVENTS: 'events'
 };
@@ -132,30 +130,23 @@ export default function LobbyDisplay() {
       newSlides.push({ type: SLIDE_TYPES.PHOTO, data: img, id: `photo-${index}` });
     });
     
-    // Insert weather dashboard after 2 photos
+    // Insert weather slide after 2 photos
     if (newSlides.length >= 2) {
-      newSlides.splice(2, 0, { type: SLIDE_TYPES.WEATHER_DASHBOARD, id: 'weather-dashboard' });
+      newSlides.splice(2, 0, { type: SLIDE_TYPES.WEATHER, id: 'weather' });
     } else {
-      newSlides.push({ type: SLIDE_TYPES.WEATHER_DASHBOARD, id: 'weather-dashboard' });
+      newSlides.push({ type: SLIDE_TYPES.WEATHER, id: 'weather' });
     }
     
-    // Insert local attractions after weather dashboard + 1 more photo
+    // Insert local attractions after weather + 1 more photo
     if (newSlides.length >= 4) {
       newSlides.splice(4, 0, { type: SLIDE_TYPES.LOCAL_ATTRACTIONS, id: 'local-attractions' });
     } else {
       newSlides.push({ type: SLIDE_TYPES.LOCAL_ATTRACTIONS, id: 'local-attractions' });
     }
     
-    // Insert weather forecast after local attractions + 1 more photo
-    if (newSlides.length >= 6) {
-      newSlides.splice(6, 0, { type: SLIDE_TYPES.WEATHER_FORECAST, id: 'weather-forecast' });
-    } else {
-      newSlides.push({ type: SLIDE_TYPES.WEATHER_FORECAST, id: 'weather-forecast' });
-    }
-    
-    // Insert events slide after weather forecast + 1 more photo
-    if (newSlides.length >= 8) {
-      newSlides.splice(8, 0, { type: SLIDE_TYPES.EVENTS, id: 'events' });
+    // Insert events slide after local attractions + 2 more photos
+    if (newSlides.length >= 7) {
+      newSlides.splice(7, 0, { type: SLIDE_TYPES.EVENTS, id: 'events' });
     } else {
       newSlides.push({ type: SLIDE_TYPES.EVENTS, id: 'events' });
     }
@@ -251,18 +242,9 @@ export default function LobbyDisplay() {
     if (!slide) return null;
 
     switch (slide.type) {
-      case SLIDE_TYPES.WEATHER_DASHBOARD:
+      case SLIDE_TYPES.WEATHER:
         return (
-          <WeatherDashboardSlide 
-            weather={weather} 
-            hourly={hourly}
-            currentTime={currentTime}
-          />
-        );
-      
-      case SLIDE_TYPES.WEATHER_FORECAST:
-        return (
-          <WeatherForecastSlide 
+          <WeatherSlide 
             weather={weather} 
             forecast={forecast}
             currentTime={currentTime}
