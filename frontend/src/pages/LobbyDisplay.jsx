@@ -255,6 +255,7 @@ export default function LobbyDisplay() {
   const [headlines, setHeadlines] = useState([]);
   const [currentHeadlineIndex, setCurrentHeadlineIndex] = useState(0);
   const [attractions, setAttractions] = useState([]);
+  const [localEvents, setLocalEvents] = useState([]);
 
   // Get current theme
   const currentTheme = useMemo(() => {
@@ -316,6 +317,15 @@ export default function LobbyDisplay() {
     }
   }, []);
 
+  const fetchLocalEvents = useCallback(async () => {
+    try {
+      const response = await axios.get(`${API}/events`, { params: { sort_by: "upcoming" } });
+      setLocalEvents(response.data);
+    } catch (error) {
+      console.error("Error fetching events:", error);
+    }
+  }, []);
+
   // Initialize
   useEffect(() => {
     fetchSettings();
@@ -323,6 +333,7 @@ export default function LobbyDisplay() {
     fetchWeather();
     fetchNews();
     fetchAttractions();
+    fetchLocalEvents();
   }, [fetchSettings, fetchImages, fetchWeather, fetchNews]);
 
   // Build slides array
@@ -673,7 +684,13 @@ export default function LobbyDisplay() {
                 maxItems={settings.attractions_per_slide || 6}
               />
             ) : currentSlide.type === SLIDE_TYPES.EVENTS ? (
-              <EventsSlide weather={weather} currentTime={currentTime} isPortrait={isPortrait} />
+              <EventsSlide 
+                weather={weather} 
+                currentTime={currentTime} 
+                isPortrait={isPortrait}
+                events={localEvents}
+                maxItems={settings.events_per_slide || 8}
+              />
             ) : (
               /* Photo Slide */
               <>

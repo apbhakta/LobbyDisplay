@@ -38,7 +38,15 @@ import {
   ChevronDown,
   ChevronUp,
   ToggleLeft,
-  ToggleRight
+  ToggleRight,
+  Star,
+  Globe,
+  Phone,
+  StickyNote,
+  ImagePlus,
+  ArrowUpDown,
+  CalendarDays,
+  Timer
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -97,6 +105,28 @@ const CONTENT_SECTIONS = [
   { type: "event", label: "Events", icon: Calendar, desc: "Upcoming events" },
   { type: "emergency", label: "Emergency Info", icon: AlertTriangle, desc: "Emergency contacts & info" },
   { type: "checkout_reminder", label: "Checkout", icon: LogOut, desc: "Checkout reminders" },
+];
+
+const EVENT_CATEGORIES = [
+  { value: "community", label: "Community" },
+  { value: "music", label: "Music" },
+  { value: "arts", label: "Arts & Culture" },
+  { value: "food", label: "Food & Drink" },
+  { value: "sports", label: "Sports" },
+  { value: "holiday", label: "Holiday" },
+  { value: "festival", label: "Festival" },
+  { value: "market", label: "Market" },
+  { value: "charity", label: "Charity" },
+  { value: "outdoor", label: "Outdoor" },
+  { value: "family", label: "Family" },
+  { value: "education", label: "Education" },
+];
+
+const EVENT_SORT_OPTIONS = [
+  { value: "upcoming", label: "Upcoming First" },
+  { value: "newest", label: "Newest First" },
+  { value: "featured", label: "Featured First" },
+  { value: "custom", label: "Custom Order" },
 ];
 
 // Drag and Drop Image Grid
@@ -469,6 +499,10 @@ export default function AdminPanel() {
   const [newAttraction, setNewAttraction] = useState(null);
   const [editingContent, setEditingContent] = useState(null);
   const [newContent, setNewContent] = useState(null);
+  const [events, setEvents] = useState([]);
+  const [editingEvent, setEditingEvent] = useState(null);
+  const [newEvent, setNewEvent] = useState(null);
+  const [eventSortBy, setEventSortBy] = useState("upcoming");
 
   const fetchSettings = useCallback(async () => {
     try {
@@ -517,13 +551,23 @@ export default function AdminPanel() {
     }
   }, []);
 
+  const fetchEvents = useCallback(async (sort = "upcoming") => {
+    try {
+      const response = await axios.get(`${API}/events`, { params: { sort_by: sort, include_expired: true } });
+      setEvents(response.data);
+    } catch (error) {
+      console.error("Error fetching events:", error);
+    }
+  }, []);
+
   useEffect(() => {
     fetchSettings();
     fetchImages();
     fetchWeather();
     fetchAttractions();
+    fetchEvents();
     CONTENT_SECTIONS.forEach(s => fetchContent(s.type));
-  }, [fetchSettings, fetchImages, fetchWeather, fetchAttractions, fetchContent]);
+  }, [fetchSettings, fetchImages, fetchWeather, fetchAttractions, fetchEvents, fetchContent]);
 
   const handleSaveSettings = async () => {
     setLoading(true);
@@ -732,6 +776,72 @@ export default function AdminPanel() {
     }
   };
 
+  // ===== Events CRUD =====
+  const emptyEvent = { title: "", description: "", event_date: "", start_time: "", end_time: "", location: "", address: "", category: "community", image_url: "", website: "", phone: "", notes: "", featured: false, enabled: true, keep_after_expired: false };
+
+  const handleCreateEvent = async () => {
+    if (!newEvent?.title) return;
+    try {
+      const response = await axios.post(`${API}/events`, newEvent);
+      setEvents(prev => [...prev, response.data]);
+      setNewEvent(null);
+      toast.success("Event added");
+    } catch (error) {
+      toast.error("Failed to add event");
+    }
+  };
+
+  const handleUpdateEvent = async (id) => {
+    if (!editingEvent) return;
+    try {
+      const { id: _, is_expired: __, ...updateData } = editingEvent;
+      const response = await axios.put(`${API}/events/${id}`, updateData);
+      setEvents(prev => prev.map(e => e.id === id ? response.data : e));
+      setEditingEvent(null);
+      toast.success("Event updated");
+    } catch (error) {
+      toast.error("Failed to update event");
+    }
+  };
+
+  const handleDeleteEvent = async (id) => {
+    try {
+      await axios.delete(`${API}/events/${id}`);
+      setEvents(prev => prev.filter(e => e.id !== id));
+      toast.success("Event deleted");
+    } catch (error) {
+      toast.error("Failed to delete event");
+    }
+  };
+
+  const handleToggleEvent = async (item, field = "enabled") => {
+    try {
+      const response = await axios.put(`${API}/events/${item.id}`, { [field]: !item[field] });
+      setEvents(prev => prev.map(e => e.id === item.id ? response.data : e));
+    } catch (error) {
+      toast.error("Failed to toggle event");
+    }
+  };
+
+  const handleEventImageUpload = async (eventId, file) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    try {
+      const response = await axios.post(`${API}/events/${eventId}/image`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      setEvents(prev => prev.map(e => e.id === eventId ? { ...e, image_url: response.data.image_url } : e));
+      toast.success("Image uploaded");
+    } catch (error) {
+      toast.error("Failed to upload image");
+    }
+  };
+
+  const handleEventSortChange = (sort) => {
+    setEventSortBy(sort);
+    fetchEvents(sort);
+  };
+
   return (
     <div className="admin-panel dark min-h-screen bg-background text-foreground">
       <Toaster position="top-right" theme="dark" />
@@ -776,6 +886,10 @@ export default function AdminPanel() {
             <TabsTrigger value="attractions" className="gap-2" data-testid="tab-attractions">
               <MapPin className="w-4 h-4" />
               Attractions
+            </TabsTrigger>
+            <TabsTrigger value="events" className="gap-2" data-testid="tab-events">
+              <CalendarDays className="w-4 h-4" />
+              Events
             </TabsTrigger>
             <TabsTrigger value="content" className="gap-2" data-testid="tab-content">
               <FileText className="w-4 h-4" />
@@ -1036,6 +1150,427 @@ export default function AdminPanel() {
                     <div className="text-center py-8 text-muted-foreground">
                       <MapPin className="w-10 h-10 mx-auto mb-2 opacity-30" />
                       <p>No attractions yet. Add one above.</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Events Tab */}
+          <TabsContent value="events" className="space-y-6" data-testid="events-tab-content">
+            <Card className="bg-card border-white/10">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <CalendarDays className="w-5 h-5" />
+                      Local Events
+                    </CardTitle>
+                    <CardDescription>Manage events shown in the lobby display</CardDescription>
+                  </div>
+                  <Button 
+                    onClick={() => setNewEvent({ ...emptyEvent })}
+                    className="gap-2"
+                    data-testid="add-event-button"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Event
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Events Settings */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 rounded-lg bg-muted/50 border border-white/5">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Events per slide</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="12"
+                      value={settings.events_per_slide || 4}
+                      onChange={(e) => setSettings({ ...settings, events_per_slide: parseInt(e.target.value) || 4 })}
+                      className="h-8"
+                      data-testid="events-per-slide-input"
+                    />
+                  </div>
+                  <div className="flex items-end gap-3 pb-1">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Auto-rotate</Label>
+                      <Switch
+                        checked={settings.events_auto_rotate !== false}
+                        onCheckedChange={(checked) => setSettings({ ...settings, events_auto_rotate: checked })}
+                        data-testid="events-auto-rotate-toggle"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-end gap-3 pb-1">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Show in slideshow</Label>
+                      <Switch
+                        checked={settings.events_show_in_slideshow !== false}
+                        onCheckedChange={(checked) => setSettings({ ...settings, events_show_in_slideshow: checked })}
+                        data-testid="events-show-in-slideshow-toggle"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-end gap-3 pb-1">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Auto-hide expired</Label>
+                      <Switch
+                        checked={settings.events_auto_hide_expired !== false}
+                        onCheckedChange={(checked) => setSettings({ ...settings, events_auto_hide_expired: checked })}
+                        data-testid="events-auto-hide-expired-toggle"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sort & Save */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ArrowUpDown className="w-4 h-4 text-muted-foreground" />
+                    <Select value={eventSortBy} onValueChange={handleEventSortChange}>
+                      <SelectTrigger className="w-[180px] h-8" data-testid="events-sort-select">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {EVENT_SORT_OPTIONS.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button onClick={handleSaveSettings} disabled={loading} size="sm" className="gap-2">
+                    <Save className="w-3 h-3" />
+                    Save Settings
+                  </Button>
+                </div>
+
+                {/* New Event Form */}
+                {newEvent && (
+                  <div className="p-4 rounded-lg border-2 border-primary/30 bg-primary/5 space-y-3" data-testid="new-event-form">
+                    <p className="text-sm font-medium text-primary">New Event</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Input
+                        placeholder="Event title *"
+                        value={newEvent.title}
+                        onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
+                        data-testid="new-event-title"
+                      />
+                      <Select
+                        value={newEvent.category}
+                        onValueChange={(value) => setNewEvent({ ...newEvent, category: value })}
+                      >
+                        <SelectTrigger data-testid="new-event-category">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {EVENT_CATEGORIES.map((cat) => (
+                            <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Input
+                      placeholder="Short description"
+                      value={newEvent.description}
+                      onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
+                      data-testid="new-event-description"
+                    />
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs">Event Date</Label>
+                        <Input
+                          type="date"
+                          value={newEvent.event_date}
+                          onChange={(e) => setNewEvent({ ...newEvent, event_date: e.target.value })}
+                          data-testid="new-event-date"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Start Time</Label>
+                        <Input
+                          placeholder="e.g. 9:00 AM"
+                          value={newEvent.start_time}
+                          onChange={(e) => setNewEvent({ ...newEvent, start_time: e.target.value })}
+                          data-testid="new-event-start-time"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">End Time</Label>
+                        <Input
+                          placeholder="e.g. 5:00 PM"
+                          value={newEvent.end_time}
+                          onChange={(e) => setNewEvent({ ...newEvent, end_time: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Input
+                        placeholder="Location name"
+                        value={newEvent.location}
+                        onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })}
+                      />
+                      <Input
+                        placeholder="Address"
+                        value={newEvent.address}
+                        onChange={(e) => setNewEvent({ ...newEvent, address: e.target.value })}
+                      />
+                    </div>
+                    <div className="grid grid-cols-3 gap-3">
+                      <Input
+                        placeholder="Website URL"
+                        value={newEvent.website}
+                        onChange={(e) => setNewEvent({ ...newEvent, website: e.target.value })}
+                      />
+                      <Input
+                        placeholder="Phone number"
+                        value={newEvent.phone}
+                        onChange={(e) => setNewEvent({ ...newEvent, phone: e.target.value })}
+                      />
+                      <Input
+                        placeholder="Notes"
+                        value={newEvent.notes}
+                        onChange={(e) => setNewEvent({ ...newEvent, notes: e.target.value })}
+                      />
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={newEvent.featured}
+                          onCheckedChange={(checked) => setNewEvent({ ...newEvent, featured: checked })}
+                        />
+                        <Label className="text-xs">Featured</Label>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button onClick={handleCreateEvent} size="sm" className="gap-2" data-testid="save-new-event">
+                        <Check className="w-3 h-3" />
+                        Save Event
+                      </Button>
+                      <Button onClick={() => setNewEvent(null)} variant="ghost" size="sm">Cancel</Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Events List */}
+                <div className="space-y-2">
+                  {events.map((item) => (
+                    <div 
+                      key={item.id}
+                      className={`rounded-lg border transition-all ${
+                        item.is_expired && !item.keep_after_expired 
+                          ? 'border-red-500/20 bg-red-500/5 opacity-50' 
+                          : item.enabled 
+                            ? 'border-white/10 bg-card' 
+                            : 'border-white/5 bg-muted/30 opacity-60'
+                      }`}
+                      data-testid={`event-item-${item.id}`}
+                    >
+                      {editingEvent?.id === item.id ? (
+                        /* Edit Mode */
+                        <div className="p-3 space-y-2">
+                          <div className="grid grid-cols-2 gap-2">
+                            <Input
+                              value={editingEvent.title}
+                              onChange={(e) => setEditingEvent({ ...editingEvent, title: e.target.value })}
+                              placeholder="Title"
+                            />
+                            <Select
+                              value={editingEvent.category}
+                              onValueChange={(value) => setEditingEvent({ ...editingEvent, category: value })}
+                            >
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                {EVENT_CATEGORIES.map((cat) => (
+                                  <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <Input
+                            value={editingEvent.description}
+                            onChange={(e) => setEditingEvent({ ...editingEvent, description: e.target.value })}
+                            placeholder="Description"
+                          />
+                          <div className="grid grid-cols-3 gap-2">
+                            <Input
+                              type="date"
+                              value={editingEvent.event_date}
+                              onChange={(e) => setEditingEvent({ ...editingEvent, event_date: e.target.value })}
+                            />
+                            <Input
+                              value={editingEvent.start_time}
+                              onChange={(e) => setEditingEvent({ ...editingEvent, start_time: e.target.value })}
+                              placeholder="Start time"
+                            />
+                            <Input
+                              value={editingEvent.end_time}
+                              onChange={(e) => setEditingEvent({ ...editingEvent, end_time: e.target.value })}
+                              placeholder="End time"
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <Input
+                              value={editingEvent.location}
+                              onChange={(e) => setEditingEvent({ ...editingEvent, location: e.target.value })}
+                              placeholder="Location"
+                            />
+                            <Input
+                              value={editingEvent.address}
+                              onChange={(e) => setEditingEvent({ ...editingEvent, address: e.target.value })}
+                              placeholder="Address"
+                            />
+                          </div>
+                          <div className="grid grid-cols-3 gap-2">
+                            <Input
+                              value={editingEvent.website}
+                              onChange={(e) => setEditingEvent({ ...editingEvent, website: e.target.value })}
+                              placeholder="Website"
+                            />
+                            <Input
+                              value={editingEvent.phone}
+                              onChange={(e) => setEditingEvent({ ...editingEvent, phone: e.target.value })}
+                              placeholder="Phone"
+                            />
+                            <Input
+                              value={editingEvent.notes}
+                              onChange={(e) => setEditingEvent({ ...editingEvent, notes: e.target.value })}
+                              placeholder="Notes"
+                            />
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-2">
+                              <Switch
+                                checked={editingEvent.featured}
+                                onCheckedChange={(checked) => setEditingEvent({ ...editingEvent, featured: checked })}
+                              />
+                              <Label className="text-xs">Featured</Label>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Switch
+                                checked={editingEvent.keep_after_expired}
+                                onCheckedChange={(checked) => setEditingEvent({ ...editingEvent, keep_after_expired: checked })}
+                              />
+                              <Label className="text-xs">Keep after expired</Label>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button onClick={() => handleUpdateEvent(item.id)} size="sm" className="gap-1">
+                              <Check className="w-3 h-3" />
+                              Save
+                            </Button>
+                            <Button onClick={() => setEditingEvent(null)} variant="ghost" size="sm">Cancel</Button>
+                          </div>
+                        </div>
+                      ) : (
+                        /* View Mode */
+                        <div className="flex items-start gap-3 p-3">
+                          {/* Image preview */}
+                          {item.image_url && (
+                            <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-white/5">
+                              <img 
+                                src={item.image_url.startsWith("http") ? item.image_url : `${BACKEND_URL}${item.image_url}`}
+                                alt={item.title}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="font-medium">{item.title}</p>
+                              {item.featured && (
+                                <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 flex items-center gap-1">
+                                  <Star className="w-3 h-3" /> Featured
+                                </span>
+                              )}
+                              {item.is_expired && (
+                                <span className="text-xs px-1.5 py-0.5 rounded bg-red-500/20 text-red-400">
+                                  Expired
+                                </span>
+                              )}
+                              {item.keep_after_expired && item.is_expired && (
+                                <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400">
+                                  Kept
+                                </span>
+                              )}
+                              <span className="text-xs px-1.5 py-0.5 rounded-full bg-white/10 text-muted-foreground">
+                                {EVENT_CATEGORIES.find(c => c.value === item.category)?.label || item.category}
+                              </span>
+                            </div>
+                            {item.description && <p className="text-sm text-muted-foreground truncate">{item.description}</p>}
+                            <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                              {item.event_date && (
+                                <span className="flex items-center gap-1">
+                                  <Calendar className="w-3 h-3" />
+                                  {new Date(item.event_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                                </span>
+                              )}
+                              {item.start_time && (
+                                <span className="flex items-center gap-1">
+                                  <Timer className="w-3 h-3" />
+                                  {item.start_time}{item.end_time ? ` - ${item.end_time}` : ""}
+                                </span>
+                              )}
+                              {item.location && (
+                                <span className="flex items-center gap-1">
+                                  <MapPin className="w-3 h-3" />
+                                  {item.location}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            {/* Image upload */}
+                            <label className="cursor-pointer">
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) handleEventImageUpload(item.id, file);
+                                  e.target.value = "";
+                                }}
+                              />
+                              <div className="h-8 w-8 flex items-center justify-center rounded-md hover:bg-accent transition-colors">
+                                <ImagePlus className="w-4 h-4 text-muted-foreground" />
+                              </div>
+                            </label>
+                            <Button variant="ghost" size="icon" className="h-8 w-8"
+                              onClick={() => handleToggleEvent(item, "featured")}
+                              data-testid={`feature-event-${item.id}`}
+                            >
+                              <Star className={`w-4 h-4 ${item.featured ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground"}`} />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8"
+                              onClick={() => handleToggleEvent(item, "enabled")}
+                              data-testid={`toggle-event-${item.id}`}
+                            >
+                              {item.enabled ? <ToggleRight className="w-4 h-4 text-green-400" /> : <ToggleLeft className="w-4 h-4 text-muted-foreground" />}
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8"
+                              onClick={() => setEditingEvent({ ...item })}
+                              data-testid={`edit-event-${item.id}`}
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive"
+                              onClick={() => handleDeleteEvent(item.id)}
+                              data-testid={`delete-event-${item.id}`}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {events.length === 0 && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <CalendarDays className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                      <p>No events yet. Add one above.</p>
                     </div>
                   )}
                 </div>

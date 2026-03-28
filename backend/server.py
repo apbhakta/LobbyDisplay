@@ -68,6 +68,11 @@ class Settings(BaseModel):
     font_scale: float = 1.0  # 0.7-1.5 global font scale
     widget_padding: int = 48  # outer padding px
     widget_spacing: int = 16  # gap between widgets px
+    events_per_slide: int = 4
+    events_auto_rotate: bool = True
+    events_show_in_slideshow: bool = True
+    events_auto_hide_expired: bool = True
+    events_sort_by: str = "upcoming"  # upcoming, newest, featured, custom
 
 class SettingsUpdate(BaseModel):
     hotel_name: Optional[str] = None
@@ -90,6 +95,11 @@ class SettingsUpdate(BaseModel):
     font_scale: Optional[float] = None
     widget_padding: Optional[int] = None
     widget_spacing: Optional[int] = None
+    events_per_slide: Optional[int] = None
+    events_auto_rotate: Optional[bool] = None
+    events_show_in_slideshow: Optional[bool] = None
+    events_auto_hide_expired: Optional[bool] = None
+    events_sort_by: Optional[str] = None
 
 class HotelImage(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -199,6 +209,68 @@ class ContentItemUpdate(BaseModel):
     order: Optional[int] = None
     priority: Optional[str] = None
     icon: Optional[str] = None
+
+# ===== Local Event Model =====
+EVENT_CATEGORIES = [
+    "community", "music", "arts", "food", "sports", "holiday",
+    "festival", "market", "charity", "outdoor", "family", "education"
+]
+
+class LocalEvent(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    title: str
+    description: str = ""
+    event_date: str = ""  # ISO date string YYYY-MM-DD
+    start_time: str = ""  # e.g. "10:00 AM"
+    end_time: str = ""  # e.g. "4:00 PM"
+    location: str = ""
+    address: str = ""
+    category: str = "community"
+    image_url: str = ""
+    website: str = ""
+    phone: str = ""
+    notes: str = ""
+    featured: bool = False
+    enabled: bool = True
+    keep_after_expired: bool = False  # manually keep visible after event date
+    order: int = 0
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+class LocalEventCreate(BaseModel):
+    title: str
+    description: str = ""
+    event_date: str = ""
+    start_time: str = ""
+    end_time: str = ""
+    location: str = ""
+    address: str = ""
+    category: str = "community"
+    image_url: str = ""
+    website: str = ""
+    phone: str = ""
+    notes: str = ""
+    featured: bool = False
+    enabled: bool = True
+    keep_after_expired: bool = False
+
+class LocalEventUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    event_date: Optional[str] = None
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+    location: Optional[str] = None
+    address: Optional[str] = None
+    category: Optional[str] = None
+    image_url: Optional[str] = None
+    website: Optional[str] = None
+    phone: Optional[str] = None
+    notes: Optional[str] = None
+    featured: Optional[bool] = None
+    enabled: Optional[bool] = None
+    keep_after_expired: Optional[bool] = None
+    order: Optional[int] = None
 
 # ===== Default/Fallback Data =====
 
@@ -674,6 +746,120 @@ async def reorder_content(section_type: str, ids: List[str]):
     for i, cid in enumerate(ids):
         await db.content.update_one({"id": cid, "section_type": section_type}, {"$set": {"order": i}})
     return {"message": "Content reordered"}
+
+# ===== Local Events Endpoints =====
+
+DEFAULT_EVENTS = [
+    {"title": "Clifton Norwegian Heritage Festival", "description": "Annual celebration of Clifton's Norwegian roots with food, music, and crafts", "event_date": "2026-04-18", "start_time": "9:00 AM", "end_time": "5:00 PM", "location": "Downtown Clifton", "address": "100 N Ave D, Clifton, TX 76634", "category": "festival", "featured": True, "enabled": True, "order": 0},
+    {"title": "Bosque County Farmers Market", "description": "Fresh local produce, baked goods, and artisan items", "event_date": "2026-04-05", "start_time": "8:00 AM", "end_time": "12:00 PM", "location": "Clifton City Park", "address": "Clifton City Park, TX", "category": "market", "featured": False, "enabled": True, "order": 1},
+    {"title": "Live Music at Cliftex Theatre", "description": "Local bands and touring artists performing country and folk music", "event_date": "2026-04-12", "start_time": "7:00 PM", "end_time": "10:00 PM", "location": "Cliftex Theatre", "address": "113 W 5th St, Clifton, TX", "category": "music", "featured": True, "enabled": True, "order": 2},
+    {"title": "Spring Trail Hike at Meridian SP", "description": "Guided nature hike through the scenic trails of Meridian State Park", "event_date": "2026-04-20", "start_time": "8:00 AM", "end_time": "11:00 AM", "location": "Meridian State Park", "address": "173 Park Rd 7, Meridian, TX", "category": "outdoor", "featured": False, "enabled": True, "order": 3},
+]
+
+def _is_event_expired(event_date_str: str) -> bool:
+    if not event_date_str:
+        return False
+    try:
+        event_date = datetime.strptime(event_date_str, "%Y-%m-%d").date()
+        today = datetime.now(timezone.utc).date()
+        return event_date < today
+    except ValueError:
+        return False
+
+@api_router.get("/events")
+async def get_events(sort_by: str = "upcoming", include_expired: bool = False):
+    items = await db.local_events.find({}, {"_id": 0}).sort("order", 1).to_list(200)
+    if not items:
+        for i, e in enumerate(DEFAULT_EVENTS):
+            e["id"] = str(uuid.uuid4())
+            e["order"] = i
+            e["image_url"] = ""
+            e["website"] = ""
+            e["phone"] = ""
+            e["notes"] = ""
+            e["keep_after_expired"] = False
+            e["created_at"] = datetime.now(timezone.utc).isoformat()
+        await db.local_events.insert_many([dict(e) for e in DEFAULT_EVENTS])
+        items = await db.local_events.find({}, {"_id": 0}).sort("order", 1).to_list(200)
+
+    # Add expired status to each event
+    for item in items:
+        item["is_expired"] = _is_event_expired(item.get("event_date", ""))
+
+    # Filter expired unless include_expired or keep_after_expired
+    if not include_expired:
+        settings_doc = await db.settings.find_one({"id": "hotel_settings"}, {"_id": 0})
+        auto_hide = True
+        if settings_doc:
+            auto_hide = settings_doc.get("events_auto_hide_expired", True)
+        if auto_hide:
+            items = [i for i in items if not i["is_expired"] or i.get("keep_after_expired", False)]
+
+    # Sort
+    if sort_by == "upcoming":
+        items.sort(key=lambda x: x.get("event_date", "9999-12-31"))
+    elif sort_by == "newest":
+        items.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    elif sort_by == "featured":
+        items.sort(key=lambda x: (not x.get("featured", False), x.get("event_date", "9999-12-31")))
+    # "custom" uses the existing order
+
+    return items
+
+@api_router.post("/events")
+async def create_event(data: LocalEventCreate):
+    count = await db.local_events.count_documents({})
+    item = LocalEvent(**data.model_dump(), order=count)
+    doc = item.model_dump()
+    await db.local_events.insert_one(doc)
+    doc.pop("_id", None)
+    doc["is_expired"] = _is_event_expired(doc.get("event_date", ""))
+    return doc
+
+@api_router.put("/events/{event_id}")
+async def update_event(event_id: str, data: LocalEventUpdate):
+    update_data = {k: v for k, v in data.model_dump().items() if v is not None}
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    await db.local_events.update_one({"id": event_id}, {"$set": update_data})
+    item = await db.local_events.find_one({"id": event_id}, {"_id": 0})
+    if not item:
+        raise HTTPException(status_code=404, detail="Event not found")
+    item["is_expired"] = _is_event_expired(item.get("event_date", ""))
+    return item
+
+@api_router.delete("/events/{event_id}")
+async def delete_event(event_id: str):
+    result = await db.local_events.delete_one({"id": event_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Event not found")
+    return {"message": "Event deleted"}
+
+@api_router.post("/events/reorder")
+async def reorder_events(ids: List[str]):
+    for i, eid in enumerate(ids):
+        await db.local_events.update_one({"id": eid}, {"$set": {"order": i}})
+    return {"message": "Events reordered"}
+
+@api_router.post("/events/{event_id}/image")
+async def upload_event_image(event_id: str, file: UploadFile = File(...)):
+    event = await db.local_events.find_one({"id": event_id}, {"_id": 0})
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+
+    ext = Path(file.filename).suffix.lower()
+    if ext not in [".jpg", ".jpeg", ".png", ".gif", ".webp"]:
+        raise HTTPException(status_code=400, detail="Invalid file type")
+
+    filename = f"event_{event_id}{ext}"
+    filepath = UPLOADS_DIR / filename
+    async with aiofiles.open(str(filepath), "wb") as f:
+        content = await file.read()
+        await f.write(content)
+
+    image_url = f"/api/uploads/{filename}"
+    await db.local_events.update_one({"id": event_id}, {"$set": {"image_url": image_url}})
+    return {"image_url": image_url}
 
 # ===== Health Check =====
 
