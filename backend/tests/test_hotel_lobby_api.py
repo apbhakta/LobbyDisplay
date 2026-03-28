@@ -145,6 +145,149 @@ class TestSettingsEndpoints:
         assert "enable_weather_animations" in data
         
         print(f"✓ Display settings present - Orientation: {data['display_orientation']}")
+    
+    def test_settings_aspect_ratio_field(self):
+        """Test settings include aspect_ratio field (Phase 1 feature)"""
+        response = requests.get(f"{BASE_URL}/api/settings")
+        assert response.status_code == 200
+        data = response.json()
+        
+        # Verify aspect_ratio field exists
+        assert "aspect_ratio" in data
+        assert "display_width" in data
+        assert "display_height" in data
+        
+        # Verify aspect_ratio is a valid preset or custom
+        valid_ratios = ["16:9", "9:16", "4:3", "3:4", "custom"]
+        assert data["aspect_ratio"] in valid_ratios, f"Invalid aspect_ratio: {data['aspect_ratio']}"
+        
+        # Verify dimensions are numbers
+        assert isinstance(data["display_width"], (int, float))
+        assert isinstance(data["display_height"], (int, float))
+        
+        print(f"✓ Aspect ratio settings present - {data['aspect_ratio']} ({data['display_width']}x{data['display_height']})")
+
+
+class TestDisplaySettingsUpdate:
+    """Tests for PUT /api/settings with display settings (Phase 1)"""
+    
+    def test_update_aspect_ratio_16_9(self):
+        """Test updating to 16:9 landscape preset"""
+        payload = {
+            "aspect_ratio": "16:9",
+            "display_orientation": "landscape",
+            "display_width": 16,
+            "display_height": 9
+        }
+        response = requests.put(f"{BASE_URL}/api/settings", json=payload)
+        assert response.status_code == 200
+        data = response.json()
+        
+        assert data["aspect_ratio"] == "16:9"
+        assert data["display_orientation"] == "landscape"
+        assert data["display_width"] == 16
+        assert data["display_height"] == 9
+        
+        print("✓ Updated to 16:9 landscape preset")
+    
+    def test_update_aspect_ratio_9_16(self):
+        """Test updating to 9:16 portrait preset"""
+        payload = {
+            "aspect_ratio": "9:16",
+            "display_orientation": "portrait",
+            "display_width": 9,
+            "display_height": 16
+        }
+        response = requests.put(f"{BASE_URL}/api/settings", json=payload)
+        assert response.status_code == 200
+        data = response.json()
+        
+        assert data["aspect_ratio"] == "9:16"
+        assert data["display_orientation"] == "portrait"
+        assert data["display_width"] == 9
+        assert data["display_height"] == 16
+        
+        print("✓ Updated to 9:16 portrait preset")
+    
+    def test_update_aspect_ratio_4_3(self):
+        """Test updating to 4:3 landscape preset"""
+        payload = {
+            "aspect_ratio": "4:3",
+            "display_orientation": "landscape",
+            "display_width": 4,
+            "display_height": 3
+        }
+        response = requests.put(f"{BASE_URL}/api/settings", json=payload)
+        assert response.status_code == 200
+        data = response.json()
+        
+        assert data["aspect_ratio"] == "4:3"
+        assert data["display_orientation"] == "landscape"
+        assert data["display_width"] == 4
+        assert data["display_height"] == 3
+        
+        print("✓ Updated to 4:3 landscape preset")
+    
+    def test_update_aspect_ratio_3_4(self):
+        """Test updating to 3:4 portrait preset"""
+        payload = {
+            "aspect_ratio": "3:4",
+            "display_orientation": "portrait",
+            "display_width": 3,
+            "display_height": 4
+        }
+        response = requests.put(f"{BASE_URL}/api/settings", json=payload)
+        assert response.status_code == 200
+        data = response.json()
+        
+        assert data["aspect_ratio"] == "3:4"
+        assert data["display_orientation"] == "portrait"
+        assert data["display_width"] == 3
+        assert data["display_height"] == 4
+        
+        print("✓ Updated to 3:4 portrait preset")
+    
+    def test_update_custom_dimensions(self):
+        """Test updating to custom dimensions"""
+        payload = {
+            "aspect_ratio": "custom",
+            "display_orientation": "landscape",
+            "display_width": 21,
+            "display_height": 9
+        }
+        response = requests.put(f"{BASE_URL}/api/settings", json=payload)
+        assert response.status_code == 200
+        data = response.json()
+        
+        assert data["aspect_ratio"] == "custom"
+        assert data["display_width"] == 21
+        assert data["display_height"] == 9
+        
+        print("✓ Updated to custom 21:9 dimensions")
+    
+    def test_settings_persist_after_update(self):
+        """Test that settings persist after update (GET after PUT)"""
+        # First update to a specific value
+        payload = {
+            "aspect_ratio": "16:9",
+            "display_orientation": "landscape",
+            "display_width": 16,
+            "display_height": 9
+        }
+        put_response = requests.put(f"{BASE_URL}/api/settings", json=payload)
+        assert put_response.status_code == 200
+        
+        # Then GET to verify persistence
+        get_response = requests.get(f"{BASE_URL}/api/settings")
+        assert get_response.status_code == 200
+        data = get_response.json()
+        
+        assert data["aspect_ratio"] == "16:9"
+        assert data["display_orientation"] == "landscape"
+        assert data["display_width"] == 16
+        assert data["display_height"] == 9
+        
+        print("✓ Settings persisted correctly after update")
 
 
 class TestImagesEndpoints:

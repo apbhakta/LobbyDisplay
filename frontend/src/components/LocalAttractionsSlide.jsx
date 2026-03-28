@@ -41,7 +41,7 @@ const attractions = [
   }
 ];
 
-export default function LocalAttractionsSlide({ weather }) {
+export default function LocalAttractionsSlide({ weather, isPortrait }) {
   return (
     <div 
       className="w-full h-full relative overflow-hidden"
@@ -54,27 +54,29 @@ export default function LocalAttractionsSlide({ weather }) {
       <div className="absolute inset-0 bg-black/30 z-[1]" />
 
       {/* Content */}
-      <div className="relative z-10 h-full flex flex-col p-12 lg:p-16" style={{ zIndex: 2 }}>
+      <div className={`relative h-full flex flex-col ${isPortrait ? 'p-6 lg:p-8' : 'p-12 lg:p-16'}`} style={{ zIndex: 2 }}>
         {/* Header */}
-        <div className="flex justify-between items-start mb-8">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <MapPin className="w-8 h-8 text-amber-300" />
-              <h2 className="text-4xl lg:text-5xl font-serif font-semibold text-white tracking-wide">
+        <div className={`flex ${isPortrait ? 'flex-col items-center gap-1' : 'justify-between items-start'} mb-6`}>
+          <div className={isPortrait ? 'text-center' : ''}>
+            <div className={`flex items-center gap-3 mb-1 ${isPortrait ? 'justify-center' : ''}`}>
+              <MapPin className="w-7 h-7 text-amber-300" />
+              <h2 className={`${isPortrait ? 'text-3xl' : 'text-4xl lg:text-5xl'} font-serif font-semibold text-white tracking-wide`}>
                 Discover Clifton
               </h2>
             </div>
-            <p className="text-xl text-white/70 font-sans ml-11">
+            <p className={`text-lg text-white/70 font-sans ${isPortrait ? '' : 'ml-11'}`}>
               The Norwegian Capital of Texas
             </p>
           </div>
-          <div className="text-right">
-            <p className="text-white/60 text-sm uppercase tracking-widest font-sans">Local Attractions</p>
-          </div>
+          {!isPortrait && (
+            <div className="text-right">
+              <p className="text-white/60 text-sm uppercase tracking-widest font-sans">Local Attractions</p>
+            </div>
+          )}
         </div>
 
         {/* Attractions Grid */}
-        <div className="flex-1 grid grid-cols-3 gap-6">
+        <div className={`flex-1 grid ${isPortrait ? 'grid-cols-2 gap-3' : 'grid-cols-3 gap-6'}`}>
           {attractions.map((attraction, index) => {
             const Icon = attraction.icon;
             return (
@@ -83,31 +85,29 @@ export default function LocalAttractionsSlide({ weather }) {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1, duration: 0.5 }}
-                className="bg-white/10 backdrop-blur-sm rounded-2xl overflow-hidden border border-white/20 hover:bg-white/15 transition-all group"
+                className="bg-white/10 backdrop-blur-sm rounded-2xl overflow-hidden border border-white/20 transition-all group"
               >
-                {/* Image */}
-                <div className="h-32 overflow-hidden relative">
+                <div className={`${isPortrait ? 'h-20' : 'h-32'} overflow-hidden relative`}>
                   <div 
-                    className="absolute inset-0 bg-cover bg-center transform group-hover:scale-105 transition-transform duration-500"
+                    className="absolute inset-0 bg-cover bg-center"
                     style={{ 
                       backgroundImage: `url(${attraction.image})`,
                       filter: "brightness(0.8)"
                     }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                  <div className="absolute bottom-3 left-4">
-                    <div className="bg-amber-500/90 p-2 rounded-lg">
-                      <Icon className="w-5 h-5 text-white" />
+                  <div className="absolute bottom-2 left-3">
+                    <div className="bg-amber-500/90 p-1.5 rounded-lg">
+                      <Icon className="w-4 h-4 text-white" />
                     </div>
                   </div>
                 </div>
                 
-                {/* Content */}
-                <div className="p-4">
-                  <h3 className="text-lg font-semibold text-white font-sans mb-1">
+                <div className={isPortrait ? "p-3" : "p-4"}>
+                  <h3 className={`${isPortrait ? 'text-sm' : 'text-lg'} font-semibold text-white font-sans mb-0.5`}>
                     {attraction.name}
                   </h3>
-                  <p className="text-sm text-white/70 font-sans leading-relaxed">
+                  <p className={`${isPortrait ? 'text-xs' : 'text-sm'} text-white/70 font-sans leading-relaxed`}>
                     {attraction.description}
                   </p>
                 </div>
@@ -117,9 +117,9 @@ export default function LocalAttractionsSlide({ weather }) {
         </div>
 
         {/* Footer */}
-        <div className="mt-6 flex items-center justify-center gap-2 text-white/50">
+        <div className="mt-4 flex items-center justify-center gap-2 text-white/50">
           <MapPin className="w-4 h-4" />
-          <span className="text-sm font-sans">Clifton, TX 76634 • Ask our front desk for directions</span>
+          <span className="text-sm font-sans">Clifton, TX 76634</span>
         </div>
       </div>
     </div>

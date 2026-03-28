@@ -55,10 +55,11 @@ class Settings(BaseModel):
     weather_slide_duration: int = 15
     weather_refresh: int = 15
     news_refresh: int = 30
-    display_orientation: str = "landscape"  # landscape, portrait, or standard
+    aspect_ratio: str = "16:9"  # "16:9", "9:16", "4:3", "3:4", "custom"
+    display_orientation: str = "landscape"  # landscape or portrait
     display_scale: int = 100  # 50-150 percentage
-    display_width: float = 16.0  # width in inches or ratio
-    display_height: float = 9.0  # height in inches or ratio
+    display_width: float = 16.0  # width in inches
+    display_height: float = 9.0  # height in inches
     enable_weather_animations: bool = True
 
 class SettingsUpdate(BaseModel):
@@ -69,6 +70,7 @@ class SettingsUpdate(BaseModel):
     weather_slide_duration: Optional[int] = None
     weather_refresh: Optional[int] = None
     news_refresh: Optional[int] = None
+    aspect_ratio: Optional[str] = None
     display_orientation: Optional[str] = None
     display_scale: Optional[int] = None
     display_width: Optional[float] = None

@@ -72,7 +72,7 @@ const events = [
 const featuredEvents = events.filter(e => e.featured);
 const otherEvents = events.filter(e => !e.featured);
 
-export default function EventsSlide({ weather, currentTime }) {
+export default function EventsSlide({ weather, currentTime, isPortrait }) {
   const currentMonth = currentTime?.toLocaleDateString("en-US", { month: "long" }) || "March";
   
   return (
@@ -87,32 +87,32 @@ export default function EventsSlide({ weather, currentTime }) {
       <div className="absolute inset-0 bg-black/30 z-[1]" />
 
       {/* Content */}
-      <div className="relative h-full flex flex-col p-12 lg:p-16" style={{ zIndex: 2 }}>
+      <div className={`relative h-full flex flex-col ${isPortrait ? 'p-6 lg:p-8' : 'p-12 lg:p-16'}`} style={{ zIndex: 2 }}>
         {/* Header */}
-        <div className="flex justify-between items-start mb-6">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <Calendar className="w-8 h-8 text-yellow-300" />
-              <h2 className="text-4xl lg:text-5xl font-serif font-semibold text-white tracking-wide">
+        <div className={`flex ${isPortrait ? 'flex-col items-center gap-1' : 'justify-between items-start'} mb-5`}>
+          <div className={isPortrait ? 'text-center' : ''}>
+            <div className={`flex items-center gap-3 mb-1 ${isPortrait ? 'justify-center' : ''}`}>
+              <Calendar className="w-7 h-7 text-yellow-300" />
+              <h2 className={`${isPortrait ? 'text-3xl' : 'text-4xl lg:text-5xl'} font-serif font-semibold text-white tracking-wide`}>
                 Local Events
               </h2>
             </div>
-            <p className="text-xl text-white/80 font-sans ml-11">
+            <p className={`text-lg text-white/80 font-sans ${isPortrait ? '' : 'ml-11'}`}>
               What's happening in Clifton, Texas
             </p>
           </div>
-          <div className="text-right">
-            <p className="text-white/60 text-sm uppercase tracking-widest font-sans">Current Month</p>
-            <p className="text-white text-2xl font-serif">{currentMonth}</p>
+          <div className={isPortrait ? 'text-center mt-1' : 'text-right'}>
+            <p className="text-white/60 text-xs uppercase tracking-widest font-sans">Current Month</p>
+            <p className="text-white text-xl font-serif">{currentMonth}</p>
           </div>
         </div>
 
         {/* Featured Events */}
-        <div className="mb-6">
-          <h3 className="text-sm uppercase tracking-widest text-yellow-300/80 font-sans mb-4 flex items-center gap-2">
-            <Star className="w-4 h-4" /> Featured Annual Events
+        <div className="mb-4">
+          <h3 className="text-xs uppercase tracking-widest text-yellow-300/80 font-sans mb-3 flex items-center gap-2">
+            <Star className="w-3.5 h-3.5" /> Featured Annual Events
           </h3>
-          <div className="grid grid-cols-4 gap-4">
+          <div className={`grid ${isPortrait ? 'grid-cols-2 gap-3' : 'grid-cols-4 gap-4'}`}>
             {featuredEvents.map((event, index) => {
               const Icon = event.icon;
               return (
@@ -121,18 +121,18 @@ export default function EventsSlide({ weather, currentTime }) {
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: index * 0.1, duration: 0.4 }}
-                  className="bg-white/10 backdrop-blur-sm rounded-2xl p-5 border border-white/20 hover:bg-white/15 transition-all"
+                  className={`bg-white/10 backdrop-blur-sm rounded-2xl ${isPortrait ? 'p-3' : 'p-5'} border border-white/20 transition-all`}
                 >
-                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${event.color} flex items-center justify-center mb-3 shadow-lg`}>
-                    <Icon className="w-6 h-6 text-white" />
+                  <div className={`${isPortrait ? 'w-9 h-9' : 'w-12 h-12'} rounded-xl bg-gradient-to-br ${event.color} flex items-center justify-center mb-2 shadow-lg`}>
+                    <Icon className={`${isPortrait ? 'w-4 h-4' : 'w-6 h-6'} text-white`} />
                   </div>
-                  <h4 className="text-lg font-semibold text-white font-sans mb-1">
+                  <h4 className={`${isPortrait ? 'text-sm' : 'text-lg'} font-semibold text-white font-sans mb-0.5`}>
                     {event.name}
                   </h4>
-                  <p className="text-yellow-300 text-sm font-medium mb-2">
+                  <p className={`text-yellow-300 ${isPortrait ? 'text-xs' : 'text-sm'} font-medium mb-1`}>
                     {event.date}
                   </p>
-                  <p className="text-sm text-white/70 font-sans leading-relaxed">
+                  <p className={`${isPortrait ? 'text-xs' : 'text-sm'} text-white/70 font-sans leading-relaxed`}>
                     {event.description}
                   </p>
                 </motion.div>
@@ -143,10 +143,10 @@ export default function EventsSlide({ weather, currentTime }) {
 
         {/* Other Events */}
         <div className="flex-1">
-          <h3 className="text-sm uppercase tracking-widest text-white/60 font-sans mb-4">
+          <h3 className="text-xs uppercase tracking-widest text-white/60 font-sans mb-3">
             More Community Events
           </h3>
-          <div className="grid grid-cols-4 gap-3">
+          <div className={`grid ${isPortrait ? 'grid-cols-2 gap-2' : 'grid-cols-4 gap-3'}`}>
             {otherEvents.map((event, index) => {
               const Icon = event.icon;
               return (
@@ -155,17 +155,17 @@ export default function EventsSlide({ weather, currentTime }) {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.4 + index * 0.1, duration: 0.4 }}
-                  className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10 flex items-start gap-3"
+                  className={`bg-white/5 backdrop-blur-sm rounded-xl ${isPortrait ? 'p-2.5' : 'p-4'} border border-white/10 flex items-start gap-2`}
                 >
-                  <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${event.color} flex items-center justify-center flex-shrink-0`}>
-                    <Icon className="w-5 h-5 text-white" />
+                  <div className={`${isPortrait ? 'w-8 h-8' : 'w-10 h-10'} rounded-lg bg-gradient-to-br ${event.color} flex items-center justify-center flex-shrink-0`}>
+                    <Icon className={`${isPortrait ? 'w-4 h-4' : 'w-5 h-5'} text-white`} />
                   </div>
                   <div>
-                    <h4 className="text-sm font-semibold text-white font-sans">
+                    <h4 className={`${isPortrait ? 'text-xs' : 'text-sm'} font-semibold text-white font-sans`}>
                       {event.name}
                     </h4>
                     <p className="text-yellow-300/80 text-xs">{event.date}</p>
-                    <p className="text-xs text-white/60 mt-1">{event.description}</p>
+                    {!isPortrait && <p className="text-xs text-white/60 mt-1">{event.description}</p>}
                   </div>
                 </motion.div>
               );
@@ -174,9 +174,9 @@ export default function EventsSlide({ weather, currentTime }) {
         </div>
 
         {/* Footer */}
-        <div className="mt-6 flex items-center justify-center gap-2 text-white/50">
+        <div className="mt-4 flex items-center justify-center gap-2 text-white/50">
           <MapPin className="w-4 h-4" />
-          <span className="text-sm font-sans">Clifton, TX 76634 • Ask our front desk for directions</span>
+          <span className="text-sm font-sans">Clifton, TX 76634</span>
         </div>
       </div>
     </div>

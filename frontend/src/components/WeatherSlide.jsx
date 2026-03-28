@@ -158,7 +158,7 @@ const LiveClock = () => {
 };
 
 // Main Weather Slide Component
-export default function WeatherSlide({ weather, forecast, currentTime }) {
+export default function WeatherSlide({ weather, forecast, currentTime, isPortrait }) {
   const theme = useMemo(() => {
     if (!weather) return "sunny";
     return getWeatherTheme(weather.condition, weather.icon);
@@ -166,10 +166,8 @@ export default function WeatherSlide({ weather, forecast, currentTime }) {
 
   if (!weather) return null;
 
-  // Calculate feels like (simple approximation if not provided)
   const feelsLike = weather.feels_like || Math.round(weather.temp - (weather.wind_speed / 2));
   
-  // Get 6 days of forecast (including today)
   const forecastDays = forecast && forecast.length > 0 
     ? [
         { day: "Today", icon: weather.icon, temp_max: weather.temp_max, temp_min: weather.temp_min, condition: weather.condition },
@@ -193,26 +191,25 @@ export default function WeatherSlide({ weather, forecast, currentTime }) {
       className="w-full h-full relative overflow-hidden"
       data-testid="weather-slide"
     >
-      {/* Dynamic Weather Background */}
       <WeatherBackground condition={weather.condition} icon={weather.icon} />
 
-      {/* Content Overlay */}
-      <div className="absolute inset-0 z-10 flex flex-col p-10 lg:p-16">
+      <div className={`absolute inset-0 z-10 flex flex-col ${isPortrait ? 'p-6 lg:p-8' : 'p-10 lg:p-16'}`}>
         
         {/* Header - Location & Time */}
-        <div className="flex justify-between items-start mb-8">
+        <div className={`flex ${isPortrait ? 'flex-col items-center gap-3' : 'justify-between items-start'} mb-6`}>
           <motion.div
             initial={{ opacity: 0, x: -30 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8 }}
+            className={isPortrait ? 'text-center' : ''}
           >
-            <div className="flex items-center gap-3 mb-2">
-              <MapPin className={`w-7 h-7 ${textColor}`} />
-              <h1 className={`text-4xl font-light tracking-wide ${textColor}`}>
+            <div className={`flex items-center gap-3 mb-1 ${isPortrait ? 'justify-center' : ''}`}>
+              <MapPin className={`w-6 h-6 ${textColor}`} />
+              <h1 className={`${isPortrait ? 'text-2xl' : 'text-4xl'} font-light tracking-wide ${textColor}`}>
                 {weather.city}, Texas
               </h1>
             </div>
-            <p className={`text-lg ${mutedColor} ml-10`}>Current Weather</p>
+            <p className={`text-base ${mutedColor} ${isPortrait ? 'text-center' : 'ml-10'}`}>Current Weather</p>
           </motion.div>
 
           <motion.div
@@ -225,125 +222,183 @@ export default function WeatherSlide({ weather, forecast, currentTime }) {
         </div>
 
         {/* Main Weather Content */}
-        <div className="flex-1 flex items-center justify-center gap-16">
-          
-          {/* Left - Large Temperature Display */}
-          <motion.div 
-            className="text-center"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-          >
+        {isPortrait ? (
+          /* Portrait: stacked layout */
+          <div className="flex-1 flex flex-col items-center justify-center gap-4">
+            {/* Temperature + Icon */}
+            <motion.div 
+              className="text-center"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+            >
+              <AnimatedWeatherIcon 
+                icon={weather.icon} 
+                condition={weather.condition}
+                size={140}
+                theme={theme}
+              />
+              <motion.p 
+                className={`text-2xl font-light capitalize mt-2 ${textColor}`}
+                animate={{ opacity: [0.9, 1, 0.9] }}
+                transition={{ duration: 3, repeat: Infinity }}
+              >
+                {weather.condition}
+              </motion.p>
+            </motion.div>
+
             <div className="flex items-start justify-center">
               <motion.span 
-                className={`text-[10rem] lg:text-[14rem] font-extralight leading-none tracking-tighter ${textColor}`}
+                className={`text-[8rem] font-extralight leading-none tracking-tighter ${textColor}`}
                 animate={{ opacity: [0.95, 1, 0.95] }}
                 transition={{ duration: 4, repeat: Infinity }}
               >
                 {Math.round(weather.temp)}
               </motion.span>
-              <span className={`text-5xl lg:text-6xl font-light ${mutedColor} mt-8`}>°F</span>
+              <span className={`text-4xl font-light ${mutedColor} mt-4`}>°F</span>
             </div>
-            
-            {/* Feels Like */}
+
+            {/* Feels Like + Hi/Lo */}
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-2">
+                <Thermometer className={`w-4 h-4 ${mutedColor}`} />
+                <span className={`text-base ${mutedColor}`}>Feels {Math.round(feelsLike)}°</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1">
+                  <ArrowUp className="w-4 h-4 text-orange-400" />
+                  <span className={`text-lg ${textColor}`}>{Math.round(weather.temp_max)}°</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <ArrowDown className="w-4 h-4 text-blue-400" />
+                  <span className={`text-lg ${textColor}`}>{Math.round(weather.temp_min)}°</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Detail chips */}
+            <div className="flex gap-3 flex-wrap justify-center mt-2">
+              <GlassPanel theme={theme} intensity="strong" className="px-4 py-2 flex items-center gap-2">
+                <Droplets className="w-4 h-4 text-blue-400" />
+                <span className="text-sm text-white">{weather.humidity}%</span>
+              </GlassPanel>
+              <GlassPanel theme={theme} intensity="strong" className="px-4 py-2 flex items-center gap-2">
+                <Wind className="w-4 h-4 text-cyan-400" />
+                <span className="text-sm text-white">{weather.wind_speed} mph</span>
+              </GlassPanel>
+              <GlassPanel theme={theme} intensity="strong" className="px-4 py-2 flex items-center gap-2">
+                <Eye className="w-4 h-4 text-purple-400" />
+                <span className="text-sm text-white">{weather.visibility || 10} mi</span>
+              </GlassPanel>
+            </div>
+          </div>
+        ) : (
+          /* Landscape: original horizontal layout */
+          <div className="flex-1 flex items-center justify-center gap-16">
             <motion.div 
-              className="flex items-center justify-center gap-2 mt-2"
-              animate={{ opacity: [0.8, 1, 0.8] }}
-              transition={{ duration: 3, repeat: Infinity }}
+              className="text-center"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
             >
-              <Thermometer className={`w-5 h-5 ${mutedColor}`} />
-              <span className={`text-xl ${mutedColor}`}>Feels like {Math.round(feelsLike)}°F</span>
+              <div className="flex items-start justify-center">
+                <motion.span 
+                  className={`text-[10rem] lg:text-[14rem] font-extralight leading-none tracking-tighter ${textColor}`}
+                  animate={{ opacity: [0.95, 1, 0.95] }}
+                  transition={{ duration: 4, repeat: Infinity }}
+                >
+                  {Math.round(weather.temp)}
+                </motion.span>
+                <span className={`text-5xl lg:text-6xl font-light ${mutedColor} mt-8`}>°F</span>
+              </div>
+              <motion.div 
+                className="flex items-center justify-center gap-2 mt-2"
+                animate={{ opacity: [0.8, 1, 0.8] }}
+                transition={{ duration: 3, repeat: Infinity }}
+              >
+                <Thermometer className={`w-5 h-5 ${mutedColor}`} />
+                <span className={`text-xl ${mutedColor}`}>Feels like {Math.round(feelsLike)}°F</span>
+              </motion.div>
+              <div className="flex items-center justify-center gap-6 mt-4">
+                <div className="flex items-center gap-2">
+                  <ArrowUp className="w-5 h-5 text-orange-400" />
+                  <span className={`text-2xl ${textColor}`}>{Math.round(weather.temp_max)}°</span>
+                </div>
+                <div className="w-px h-6 bg-white/30" />
+                <div className="flex items-center gap-2">
+                  <ArrowDown className="w-5 h-5 text-blue-400" />
+                  <span className={`text-2xl ${textColor}`}>{Math.round(weather.temp_min)}°</span>
+                </div>
+              </div>
             </motion.div>
 
-            {/* High / Low */}
-            <div className="flex items-center justify-center gap-6 mt-4">
-              <div className="flex items-center gap-2">
-                <ArrowUp className="w-5 h-5 text-orange-400" />
-                <span className={`text-2xl ${textColor}`}>{Math.round(weather.temp_max)}°</span>
-              </div>
-              <div className="w-px h-6 bg-white/30" />
-              <div className="flex items-center gap-2">
-                <ArrowDown className="w-5 h-5 text-blue-400" />
-                <span className={`text-2xl ${textColor}`}>{Math.round(weather.temp_min)}°</span>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Center - Weather Icon & Condition */}
-          <motion.div 
-            className="flex flex-col items-center"
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.3 }}
-          >
-            <AnimatedWeatherIcon 
-              icon={weather.icon} 
-              condition={weather.condition}
-              size={200}
-              theme={theme}
-            />
-            <motion.p 
-              className={`text-3xl lg:text-4xl font-light capitalize mt-4 ${textColor}`}
-              animate={{ opacity: [0.9, 1, 0.9] }}
-              transition={{ duration: 3, repeat: Infinity }}
+            <motion.div 
+              className="flex flex-col items-center"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.3 }}
             >
-              {weather.condition}
-            </motion.p>
-          </motion.div>
+              <AnimatedWeatherIcon 
+                icon={weather.icon} 
+                condition={weather.condition}
+                size={200}
+                theme={theme}
+              />
+              <motion.p 
+                className={`text-3xl lg:text-4xl font-light capitalize mt-4 ${textColor}`}
+                animate={{ opacity: [0.9, 1, 0.9] }}
+                transition={{ duration: 3, repeat: Infinity }}
+              >
+                {weather.condition}
+              </motion.p>
+            </motion.div>
 
-          {/* Right - Weather Details */}
-          <motion.div
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-          >
-            <GlassPanel theme={theme} intensity="strong" className="p-8 space-y-6">
-              {/* Humidity */}
-              <div className="flex items-center gap-5">
-                <div className="w-14 h-14 rounded-xl bg-blue-500/20 flex items-center justify-center">
-                  <Droplets className="w-7 h-7 text-blue-400" />
+            <motion.div
+              initial={{ opacity: 0, x: 30 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8, delay: 0.4 }}
+            >
+              <GlassPanel theme={theme} intensity="strong" className="p-8 space-y-6">
+                <div className="flex items-center gap-5">
+                  <div className="w-14 h-14 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                    <Droplets className="w-7 h-7 text-blue-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-white/60 uppercase tracking-wider">Humidity</p>
+                    <p className="text-3xl font-light text-white">{weather.humidity}%</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm text-white/60 uppercase tracking-wider">Humidity</p>
-                  <p className="text-3xl font-light text-white">{weather.humidity}%</p>
+                <div className="flex items-center gap-5">
+                  <div className="w-14 h-14 rounded-xl bg-cyan-500/20 flex items-center justify-center">
+                    <Wind className="w-7 h-7 text-cyan-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-white/60 uppercase tracking-wider">Wind Speed</p>
+                    <p className="text-3xl font-light text-white">{weather.wind_speed} mph</p>
+                  </div>
                 </div>
-              </div>
-
-              {/* Wind */}
-              <div className="flex items-center gap-5">
-                <div className="w-14 h-14 rounded-xl bg-cyan-500/20 flex items-center justify-center">
-                  <Wind className="w-7 h-7 text-cyan-400" />
+                <div className="flex items-center gap-5">
+                  <div className="w-14 h-14 rounded-xl bg-purple-500/20 flex items-center justify-center">
+                    <Eye className="w-7 h-7 text-purple-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-white/60 uppercase tracking-wider">Visibility</p>
+                    <p className="text-3xl font-light text-white">{weather.visibility || 10} mi</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm text-white/60 uppercase tracking-wider">Wind Speed</p>
-                  <p className="text-3xl font-light text-white">{weather.wind_speed} mph</p>
+                <div className="flex items-center gap-5">
+                  <div className="w-14 h-14 rounded-xl bg-indigo-500/20 flex items-center justify-center">
+                    <CloudRain className="w-7 h-7 text-indigo-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-white/60 uppercase tracking-wider">Precipitation</p>
+                    <p className="text-3xl font-light text-white">{weather.precipitation || 0}%</p>
+                  </div>
                 </div>
-              </div>
-
-              {/* Visibility */}
-              <div className="flex items-center gap-5">
-                <div className="w-14 h-14 rounded-xl bg-purple-500/20 flex items-center justify-center">
-                  <Eye className="w-7 h-7 text-purple-400" />
-                </div>
-                <div>
-                  <p className="text-sm text-white/60 uppercase tracking-wider">Visibility</p>
-                  <p className="text-3xl font-light text-white">{weather.visibility || 10} mi</p>
-                </div>
-              </div>
-
-              {/* Precipitation Chance */}
-              <div className="flex items-center gap-5">
-                <div className="w-14 h-14 rounded-xl bg-indigo-500/20 flex items-center justify-center">
-                  <CloudRain className="w-7 h-7 text-indigo-400" />
-                </div>
-                <div>
-                  <p className="text-sm text-white/60 uppercase tracking-wider">Precipitation</p>
-                  <p className="text-3xl font-light text-white">{weather.precipitation || 0}%</p>
-                </div>
-              </div>
-            </GlassPanel>
-          </motion.div>
-        </div>
+              </GlassPanel>
+            </motion.div>
+          </div>
+        )}
 
         {/* 6-Day Forecast */}
         <motion.div
@@ -351,9 +406,9 @@ export default function WeatherSlide({ weather, forecast, currentTime }) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.5 }}
         >
-          <GlassPanel theme={theme} intensity="medium" className="p-6">
-            <p className="text-sm text-white/60 uppercase tracking-wider mb-4 ml-2">6-Day Forecast</p>
-            <div className="grid grid-cols-6 gap-4">
+          <GlassPanel theme={theme} intensity="medium" className={isPortrait ? "p-4" : "p-6"}>
+            <p className={`text-sm text-white/60 uppercase tracking-wider ${isPortrait ? 'mb-3 ml-1' : 'mb-4 ml-2'}`}>6-Day Forecast</p>
+            <div className={`grid ${isPortrait ? 'grid-cols-3 gap-2' : 'grid-cols-6 gap-4'}`}>
               {forecastDays.slice(0, 6).map((day, index) => (
                 <ForecastDayCard
                   key={index}
