@@ -6,7 +6,8 @@ Build a premium fullscreen hotel lobby display web app in Clifton, Texas for a 1
 ## Architecture
 - Frontend: React + TailwindCSS + framer-motion + shadcn/ui
 - Backend: FastAPI + MongoDB + httpx
-- APIs: OpenWeatherMap, NewsAPI.org
+- Weather: WeatherAPI.com (replaced OpenWeatherMap Feb 2026)
+- News: NewsAPI.org
 
 ## Completed Features
 
@@ -45,6 +46,16 @@ Build a premium fullscreen hotel lobby display web app in Clifton, Texas for a 1
 - [x] **Display Layout card** replaces old widget layout presets in admin
 - [x] **DB data migration**: Cleaned unsplash URLs from existing attractions, cleared hotel_name
 
+### Phase 6: WeatherAPI.com Migration (Completed Feb 2026)
+- [x] Replaced OpenWeatherMap with WeatherAPI.com as weather provider
+- [x] `WEATHERAPI_KEY` env var replaces `OPENWEATHER_API_KEY`
+- [x] Current weather via `/v1/current.json` — real temp, condition, humidity, wind, UV, sunrise/sunset
+- [x] Forecast via `/v1/forecast.json?days=7` — multi-day forecast + 24hr hourly data
+- [x] Icon mapping: `_weatherapi_to_owm_icon()` converts WeatherAPI condition codes to OWM icon format for frontend theme compatibility
+- [x] New fields: `feels_like`, `precipitation` added to WeatherData model
+- [x] 15-minute cache, graceful fallback on API errors
+- [x] Modular design — provider can be swapped by changing the weather endpoint functions only
+
 ### Admin Panel (6 tabs)
 - Images: Upload, drag-reorder, delete, reset
 - Attractions: Full CRUD with categories, enable/disable, per-slide config
@@ -66,7 +77,9 @@ Build a premium fullscreen hotel lobby display web app in Clifton, Texas for a 1
 - GET/POST /api/attractions, PUT/DELETE /api/attractions/{id}, POST /api/attractions/reorder
 - GET/POST /api/events, PUT/DELETE /api/events/{id}, POST /api/events/reorder, POST /api/events/{id}/image
 - GET/POST /api/content/{type}, PUT/DELETE /api/content/{type}/{id}, POST /api/content/{type}/reorder
-- GET /api/weather, GET /api/weather/extended, GET /api/news
+- GET /api/weather (WeatherAPI.com current), GET /api/weather/extended (current + forecast + hourly)
+- GET /api/news
+- GET /api/health
 
 ## P1 Upcoming Tasks
 - Scrolling ticker bar at the bottom for content announcements/promotions
