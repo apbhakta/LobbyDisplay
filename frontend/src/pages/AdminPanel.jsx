@@ -332,16 +332,16 @@ const LivePreview = ({ settings, weather }) => {
     return "linear-gradient(180deg, #475569 0%, #64748b 40%, #94a3b8 100%)";
   };
 
-  // Miniature widget blocks for the info panel
-  const clockBlock = <div className="bg-white/30 rounded h-2.5 w-10 mb-0.5" />;
-  const dateBlock = <div className="bg-white/15 rounded h-1 w-14" />;
+  // Mini widget blocks
+  const hotelBlock = settings.hotel_name ? <div className="bg-white/20 rounded h-2 w-14 mb-0.5" /> : null;
+  const clockBlock = <div className="bg-white/25 rounded h-3 w-12 mb-0.5" />;
   const weatherBlock = (
-    <div className="p-1 rounded bg-white/15">
+    <div className="p-1 rounded bg-white/15 backdrop-blur">
       <div className="flex items-center gap-1">
-        <div className="w-3 h-3 rounded bg-white/20" />
+        <div className="w-4 h-4 rounded bg-white/20" />
         <div>
-          <div className="bg-white/30 rounded h-1.5 w-6 mb-0.5" />
-          <div className="bg-white/15 rounded h-1 w-9" />
+          <div className="bg-white/30 rounded h-1.5 w-7 mb-0.5" />
+          <div className="bg-white/15 rounded h-1 w-10" />
         </div>
       </div>
     </div>
@@ -353,57 +353,30 @@ const LivePreview = ({ settings, weather }) => {
     </div>
   );
 
-  const renderSeparatedLayout = () => {
+  const renderOverlayPreview = () => {
     if (isPortrait) {
-      // Portrait: Photo top (65%), Info panel bottom (35%)
       return (
-        <div className="absolute inset-0 flex flex-col">
-          {/* Photo area */}
-          <div className="flex-[65] relative overflow-hidden" style={{ background: getThemeBg() }}>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-6 h-6 rounded border border-white/20 flex items-center justify-center">
-                <div className="w-3 h-3 rounded-sm bg-white/15" />
-              </div>
-            </div>
-            <div className="absolute bottom-0 left-0 right-0 h-2 bg-gradient-to-t from-slate-900/60 to-transparent" />
-          </div>
-          {/* Info panel - separate, no overlap */}
-          <div className="flex-[35] bg-slate-900/95 p-2 flex flex-col justify-between">
-            <div>
-              {clockBlock}
-              <div className="mt-0.5">{dateBlock}</div>
-            </div>
-            <div className="space-y-1">
-              {weatherBlock}
-              {newsBlock}
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    // Landscape: Photo left (68%), Info panel right (32%)
-    return (
-      <div className="absolute inset-0 flex">
-        {/* Photo area */}
-        <div className="flex-[68] relative overflow-hidden" style={{ background: getThemeBg() }}>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-8 h-6 rounded border border-white/20 flex items-center justify-center">
-              <div className="w-4 h-3 rounded-sm bg-white/15" />
-            </div>
-          </div>
-          <div className="absolute top-0 right-0 bottom-0 w-1 bg-gradient-to-l from-slate-900/40 to-transparent" />
-        </div>
-        {/* Info panel - separate, no overlap */}
-        <div className="flex-[32] bg-slate-900/95 p-2 flex flex-col justify-between">
-          <div>
-            {clockBlock}
-            <div className="mt-0.5">{dateBlock}</div>
-          </div>
+        <div className="absolute inset-0 p-2.5 flex flex-col">
+          <div className="text-center">{hotelBlock}<div className="mt-1">{clockBlock}</div></div>
+          <div className="flex-1" />
           <div className="space-y-1">
             {weatherBlock}
             {newsBlock}
           </div>
+        </div>
+      );
+    }
+    // Landscape: hotel+clock top, weather+news bottom
+    return (
+      <div className="absolute inset-0 p-2.5 flex flex-col">
+        <div className="flex justify-between items-start">
+          <div>{hotelBlock}</div>
+          <div>{clockBlock}</div>
+        </div>
+        <div className="flex-1" />
+        <div className="flex justify-between items-end gap-2">
+          {weatherBlock}
+          <div className="max-w-[45%]">{newsBlock}</div>
         </div>
       </div>
     );
@@ -413,11 +386,11 @@ const LivePreview = ({ settings, weather }) => {
     <div className="flex flex-col items-center gap-4" data-testid="live-preview">
       <div 
         className="relative rounded-lg overflow-hidden shadow-2xl border border-white/20"
-        style={{ width: previewW, height: previewH }}
+        style={{ width: previewW, height: previewH, background: getThemeBg() }}
         data-testid="preview-canvas"
       >
-        {renderSeparatedLayout()}
-        {/* Slide indicators */}
+        <div className="absolute inset-0 bg-black/20" />
+        {renderOverlayPreview()}
         <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-0.5 z-10">
           <div className="w-3 h-0.5 rounded-full bg-white/80" />
           <div className="w-0.5 h-0.5 rounded-full bg-white/30" />
@@ -444,7 +417,7 @@ const LivePreview = ({ settings, weather }) => {
         </div>
         <div className="flex justify-between gap-4">
           <span className="text-muted-foreground">Layout:</span>
-          <span className="font-medium">Separated Panel</span>
+          <span className="font-medium">Fullscreen Overlay</span>
         </div>
         <div className="flex justify-between gap-4">
           <span className="text-muted-foreground">Widget Scale:</span>
@@ -2064,44 +2037,25 @@ export default function AdminPanel() {
                       <Maximize2 className="w-5 h-5" />
                       Display Layout
                     </CardTitle>
-                    <CardDescription>Photo and widget areas are strictly separated for maximum visual impact</CardDescription>
+                    <CardDescription>Fullscreen photos with floating glassmorphism widget overlays</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="p-4 rounded-xl bg-muted/30 border border-white/5">
                       <div className="flex items-center gap-4">
                         {/* Mini layout diagram */}
-                        <div className="w-24 h-14 rounded border border-white/20 flex overflow-hidden flex-shrink-0">
-                          {settings.display_orientation === "portrait" ? (
-                            <div className="flex flex-col w-full">
-                              <div className="flex-[65] bg-white/10 flex items-center justify-center">
-                                <ImageIcon className="w-3 h-3 text-white/30" />
-                              </div>
-                              <div className="flex-[35] bg-slate-800 border-t border-white/10 p-0.5">
-                                <div className="bg-white/20 rounded h-0.5 w-3 mb-0.5" />
-                                <div className="bg-white/10 rounded h-0.5 w-4" />
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="flex w-full">
-                              <div className="flex-[68] bg-white/10 flex items-center justify-center">
-                                <ImageIcon className="w-3 h-3 text-white/30" />
-                              </div>
-                              <div className="flex-[32] bg-slate-800 border-l border-white/10 p-0.5 flex flex-col justify-between">
-                                <div className="bg-white/20 rounded h-0.5 w-3" />
-                                <div>
-                                  <div className="bg-white/15 rounded h-0.5 w-4 mb-0.5" />
-                                  <div className="bg-white/10 rounded h-0.5 w-3" />
-                                </div>
-                              </div>
-                            </div>
-                          )}
+                        <div className="w-24 h-14 rounded border border-white/20 relative overflow-hidden flex-shrink-0" style={{ background: 'linear-gradient(180deg, #475569 0%, #64748b 100%)' }}>
+                          <div className="absolute inset-0 bg-black/20" />
+                          {/* Top widgets */}
+                          <div className="absolute top-1 left-1 w-5 h-1 rounded-sm bg-white/30" />
+                          <div className="absolute top-1 right-1 w-4 h-1.5 rounded-sm bg-white/25" />
+                          {/* Bottom widgets */}
+                          <div className="absolute bottom-1 left-1 w-6 h-2 rounded-sm bg-white/15 backdrop-blur" />
+                          <div className="absolute bottom-1 right-1 w-5 h-1.5 rounded-sm bg-white/10" />
                         </div>
                         <div>
-                          <p className="text-sm font-medium">Separated Panel Layout</p>
+                          <p className="text-sm font-medium">Fullscreen Overlay</p>
                           <p className="text-xs text-muted-foreground mt-1">
-                            {settings.display_orientation === "portrait" 
-                              ? "Photo fills the top 65%, clock/weather/news in a dedicated panel below" 
-                              : "Photo fills the left 68%, clock/weather/news in a dedicated panel on the right"}
+                            Photos fill the entire screen. Clock, weather, and news float on top with glassmorphism effects.
                           </p>
                         </div>
                       </div>

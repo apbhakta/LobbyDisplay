@@ -18,7 +18,7 @@ const SLIDE_TYPES = {
 };
 
 // Glass panel component
-const GlassPanel = ({ children, className = "", theme = "sunny" }) => {
+const GlassPanel = ({ children, className = "", theme = "sunny", ...props }) => {
   const getGlassStyle = () => {
     const baseStyle = "backdrop-blur-xl border border-white/20 shadow-2xl";
     switch (theme) {
@@ -35,6 +35,7 @@ const GlassPanel = ({ children, className = "", theme = "sunny" }) => {
       className={`rounded-2xl ${getGlassStyle()} ${className}`}
       animate={{ boxShadow: ["0 8px 32px rgba(0,0,0,0.1)", "0 12px 40px rgba(0,0,0,0.15)", "0 8px 32px rgba(0,0,0,0.1)"] }}
       transition={{ duration: 4, repeat: Infinity }}
+      {...props}
     >
       {children}
     </motion.div>
@@ -361,116 +362,153 @@ export default function LobbyDisplay() {
   const isSnow = currentTheme === "snow";
 
   // =========================================
-  // PHOTO SLIDE: Separated layout — photo is hero, widgets in their own panel
+  // PHOTO SLIDE: Fullscreen photo with overlay widgets
   // =========================================
   const renderPhotoSlide = () => {
     const hasImage = currentSlide?.data;
-    const widgetStyle = { transform: `scale(${wScale})`, transformOrigin: 'top left' };
+    const padding = settings.widget_padding || 48;
+    const gap = settings.widget_spacing || 16;
+    const widgetStyle = { transform: `scale(${wScale})`, transformOrigin: 'bottom left' };
+    const layout = settings.widget_layout || "bottom-left";
 
-    // Info panel content — clock, weather, news
-    const infoContent = (
-      <div className="flex flex-col h-full justify-between" style={widgetStyle}>
-        {/* Clock & Date */}
-        <motion.div
-          initial={{ opacity: 0, y: -15 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-        >
-          <LiveClock theme={currentTheme} size="compact" />
-          <DateDisplay theme={currentTheme} />
-        </motion.div>
-
-        <div className="flex-1" />
-
-        {/* Weather */}
-        <motion.div
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-          className="mb-3"
-        >
-          <WeatherWidget weather={weather} theme={currentTheme} />
-        </motion.div>
-
-        {/* News */}
-        <motion.div
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.4 }}
-        >
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentHeadlineIndex}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.6 }}
-            >
-              <NewsHeadline headline={currentHeadline} theme={currentTheme} />
-            </motion.div>
-          </AnimatePresence>
-        </motion.div>
-      </div>
-    );
-
-    if (isPortrait) {
-      // PORTRAIT: Photo on top (65%), info panel below (35%)
-      return (
-        <div className="w-full h-full flex flex-col" data-testid="photo-slide">
-          <WeatherBackground condition={weather?.condition} icon={weather?.icon} />
-          
-          {/* Photo area — hero */}
-          <div className="relative flex-[65] overflow-hidden">
-            {hasImage ? (
-              <motion.img
-                src={getImageUrl(currentSlide.data)}
-                alt="Hotel"
-                className="w-full h-full object-cover"
-                initial={{ scale: 1.05 }}
-                animate={{ scale: 1 }}
-                transition={{ duration: 8, ease: "easeOut" }}
-              />
-            ) : (
-              <EmptyPhotoState theme={currentTheme} />
-            )}
-            {/* Subtle bottom fade into panel */}
-            <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-slate-900/80 to-transparent" />
-          </div>
-
-          {/* Info panel — separated, no overlap */}
-          <div className="relative flex-[35] bg-slate-900/95 backdrop-blur-sm px-6 py-5 z-10">
-            {infoContent}
-          </div>
-        </div>
-      );
-    }
-
-    // LANDSCAPE: Photo on left (68%), info panel on right (32%)
     return (
-      <div className="w-full h-full flex" data-testid="photo-slide">
+      <div className="w-full h-full relative" data-testid="photo-slide">
+        {/* Animated weather background (behind photo) */}
         <WeatherBackground condition={weather?.condition} icon={weather?.icon} />
 
-        {/* Photo area — hero, takes majority of screen */}
-        <div className="relative flex-[68] overflow-hidden">
-          {hasImage ? (
-            <motion.img
-              src={getImageUrl(currentSlide.data)}
-              alt="Hotel"
-              className="w-full h-full object-cover"
-              initial={{ scale: 1.05 }}
-              animate={{ scale: 1 }}
-              transition={{ duration: 8, ease: "easeOut" }}
-            />
-          ) : (
-            <EmptyPhotoState theme={currentTheme} />
-          )}
-          {/* Subtle right-edge fade */}
-          <div className="absolute top-0 right-0 bottom-0 w-6 bg-gradient-to-l from-slate-900/60 to-transparent" />
+        {/* Fullscreen photo */}
+        {hasImage ? (
+          <motion.img
+            src={getImageUrl(currentSlide.data)}
+            alt="Hotel"
+            className="absolute inset-0 w-full h-full object-cover z-[1]"
+            initial={{ scale: 1.05 }}
+            animate={{ scale: 1 }}
+            transition={{ duration: 8, ease: "easeOut" }}
+          />
+        ) : (
+          <EmptyPhotoState theme={currentTheme} />
+        )}
+
+        {/* Subtle gradient overlays for widget readability */}
+        <div className="absolute inset-0 z-[2] pointer-events-none">
+          <div className="absolute bottom-0 left-0 right-0 h-[45%] bg-gradient-to-t from-black/50 to-transparent" />
+          <div className="absolute top-0 left-0 right-0 h-[25%] bg-gradient-to-b from-black/30 to-transparent" />
         </div>
 
-        {/* Info panel — completely separated from photo */}
-        <div className="relative flex-[32] bg-slate-900/95 backdrop-blur-sm p-6 z-10 flex flex-col">
-          {infoContent}
+        {/* Overlay widgets */}
+        <div className="absolute inset-0 z-[3]" style={{ padding }}>
+          {isPortrait ? (
+            /* PORTRAIT overlay layout */
+            <div className="h-full flex flex-col">
+              {/* Top: Hotel name + clock centered */}
+              <div className="text-center">
+                {settings.hotel_name && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.8 }}
+                  >
+                    <h1 className="text-2xl font-serif font-bold text-white tracking-widest uppercase drop-shadow-lg">
+                      {settings.hotel_name}
+                    </h1>
+                  </motion.div>
+                )}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.8, delay: 0.2 }}
+                  className="mt-2"
+                >
+                  <LiveClock theme={currentTheme} size="compact" />
+                  <DateDisplay theme={currentTheme} />
+                </motion.div>
+              </div>
+
+              <div className="flex-1" />
+
+              {/* Bottom: Weather + News stacked */}
+              <div className="space-y-3" style={{ transform: `scale(${wScale})`, transformOrigin: 'bottom center' }}>
+                <WeatherWidget weather={weather} theme={currentTheme} />
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={currentHeadlineIndex}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.6 }}
+                  >
+                    <NewsHeadline headline={currentHeadline} theme={currentTheme} />
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+            </div>
+          ) : (
+            /* LANDSCAPE overlay layout */
+            <div className="h-full flex flex-col">
+              {/* Top row: Hotel name (left) + Clock (right) */}
+              <div className="flex justify-between items-start">
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.8 }}
+                >
+                  {settings.hotel_name && (
+                    <div>
+                      <h1 className="text-xl font-serif font-bold text-white tracking-[0.2em] uppercase drop-shadow-lg">
+                        {settings.hotel_name}
+                      </h1>
+                      <p className="text-white/60 text-xs tracking-wider mt-0.5">Welcome</p>
+                    </div>
+                  )}
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.8 }}
+                  className="text-right"
+                >
+                  <LiveClock theme={currentTheme} size="large" />
+                  <DateDisplay theme={currentTheme} />
+                </motion.div>
+              </div>
+
+              <div className="flex-1" />
+
+              {/* Bottom row: Weather (left) + News (right) */}
+              <div className="flex items-end justify-between" style={{ gap, transform: `scale(${wScale})`, transformOrigin: 'bottom left' }}>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.8, delay: 0.2 }}
+                  className="max-w-[45%]"
+                >
+                  <WeatherWidget weather={weather} theme={currentTheme} />
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.8, delay: 0.4 }}
+                  className="max-w-[45%]"
+                  style={{ transformOrigin: 'bottom right' }}
+                >
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={currentHeadlineIndex}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -8 }}
+                      transition={{ duration: 0.6 }}
+                    >
+                      <NewsHeadline headline={currentHeadline} theme={currentTheme} />
+                    </motion.div>
+                  </AnimatePresence>
+                </motion.div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
