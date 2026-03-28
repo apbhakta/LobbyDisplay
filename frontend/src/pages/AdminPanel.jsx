@@ -385,11 +385,11 @@ export default function AdminPanel() {
                       }`}
                       data-testid="orientation-standard"
                     >
-                      <div className="w-16 h-20 rounded-lg border-2 border-current flex items-center justify-center">
-                        <Monitor className="w-6 h-6" />
+                      <div className="w-14 h-20 rounded-lg border-2 border-current flex items-center justify-center">
+                        <Monitor className="w-5 h-6" />
                       </div>
                       <span className="text-sm font-medium">Standard</span>
-                      <span className="text-xs text-muted-foreground">4:3 (7.5" × 10")</span>
+                      <span className="text-xs text-muted-foreground">3:4 (7.5" × 10")</span>
                     </button>
                   </div>
                 </div>
@@ -426,21 +426,19 @@ export default function AdminPanel() {
                   <p className="text-sm text-muted-foreground mb-3">Preview</p>
                   <div className="flex justify-center">
                     <div 
-                      className={`bg-gradient-to-br from-slate-700 to-slate-900 rounded-lg flex flex-col items-center justify-center text-white/50 text-xs transition-all ${
-                        settings.display_orientation === "landscape" 
-                          ? "w-32 h-20" 
-                          : settings.display_orientation === "portrait"
-                          ? "w-20 h-32"
-                          : "w-24 h-28"
-                      }`}
+                      className={`bg-gradient-to-br from-slate-700 to-slate-900 rounded-lg flex flex-col items-center justify-center text-white/50 text-xs transition-all`}
                       style={{ 
+                        width: settings.display_orientation === "landscape" ? '128px' : 
+                               settings.display_orientation === "portrait" ? '80px' : '75px',
+                        height: settings.display_orientation === "landscape" ? '80px' : 
+                                settings.display_orientation === "portrait" ? '128px' : '100px',
                         transform: `scale(${settings.display_scale / 100})`,
                         transformOrigin: 'center'
                       }}
                     >
                       <span>
                         {settings.display_orientation === "landscape" ? "16:9" : 
-                         settings.display_orientation === "portrait" ? "9:16" : "4:3"}
+                         settings.display_orientation === "portrait" ? "9:16" : "3:4"}
                       </span>
                       {settings.display_orientation === "standard" && (
                         <span className="text-[10px] mt-1">7.5" × 10"</span>

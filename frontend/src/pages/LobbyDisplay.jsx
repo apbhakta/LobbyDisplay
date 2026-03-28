@@ -409,14 +409,14 @@ export default function LobbyDisplay() {
       data-testid="lobby-display"
       data-orientation={settings.display_orientation}
     >
-      {/* Standard 4:3 mode wrapper */}
+      {/* Standard 4:3 mode wrapper - 7.5" x 10" (portrait-ish 3:4 ratio) */}
       {isStandard ? (
         <div 
           className="relative overflow-hidden bg-black"
           style={{
             width: 'min(100vw, calc(100vh * 0.75))',
-            height: 'min(100vh, calc(100vw / 0.75))',
-            aspectRatio: '3 / 4',
+            height: 'min(100vh, calc(100vw * 1.333))',
+            aspectRatio: '7.5 / 10',
           }}
         >
           {/* Slide Content with Crossfade */}
