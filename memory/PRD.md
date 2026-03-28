@@ -2,116 +2,68 @@
 
 ## Original Problem Statement
 Build a fullscreen hotel lobby display app for a TV screen in landscape mode with:
-- Live digital clock (HH:MM format)
-- Current date and day
+- Live digital clock, date and day
 - Live weather from OpenWeatherMap
 - One live news headline from NewsAPI.org
 - Rotating hotel photo gallery (8-10 second intervals)
-- **Two dedicated weather slides** (dashboard + forecast)
+- Weather dashboard and forecast slides
+- **Local attractions slide for Clifton, TX**
+- **Events slide for Clifton, TX (Norwegian Capital of Texas)**
 - Admin panel for content management
-- Fallback content for API failures
-
-## User Personas
-1. **Hotel Guest** - Views the lobby display for time, weather, and news
-2. **Hotel Admin** - Manages display settings, images, and content via admin panel
-
-## Core Requirements (Static)
-- Fullscreen 16:9 TV display
-- Premium, elegant dark theme
-- Playfair Display + Outfit fonts
-- Smooth image transitions (Framer Motion)
-- Live data updates (clock every second, weather 15 min, news 30 min)
-- Robust fallback for API failures
 
 ## What's Been Implemented (March 28, 2026)
 
-### Phase 1 - Core Display
-- [x] Fullscreen lobby display with rotating hero images
-- [x] Large live clock with AM/PM indicator
-- [x] Full date and weekday display
-- [x] Weather widget with OpenWeatherMap integration
-- [x] News headline rotation from NewsAPI.org
-- [x] Hotel name branding display
-- [x] Framer Motion crossfade animations
-- [x] Slide indicator dots at bottom
+### Slide Types (9 Total)
+1. **Photo Slides** (5) - Hotel images with clock, date, weather, news
+2. **Weather Dashboard** - Teal gradient with gauge, hourly chart, highlights
+3. **Weather Forecast** - Sky-blue with location card, 7-day forecast
+4. **Local Attractions** - Blue gradient featuring 6 Clifton attractions
+5. **Events** - Orange gradient with featured & community events
 
-### Phase 2 - Weather Slides (Added)
-- [x] **Weather Dashboard Slide** (Teal gradient)
-  - Temperature gauge with color gradient
-  - Current temperature large display
-  - Weather condition and icon
-  - Date/Time display
-  - High/Low temperature card (orange gradient)
-  - Hourly forecast bar chart (8 hours)
-  - Highlights section with 6 cards:
-    - UV Index with circular gauge
-    - Wind Status
-    - Sunrise & Sunset times
-    - Humidity percentage
-    - Visibility distance
-    - Air Quality index
-    
-- [x] **Weather Forecast Slide** (Sky-blue gradient)
-  - Location card with city name and weather icon
-  - Current condition text
-  - Large temperature display (+39°F style)
-  - Lowest/Highest temperatures
-  - 7-day forecast row with:
-    - Day abbreviation
-    - Weather icon
-    - Min/Max temperatures
-  - Decorative cloud waves at bottom
+### Local Attractions Slide
+- Bosque County Courthouse (1886 limestone historic building)
+- Clifton Lutheran Church (Historic Rock Church, Norwegian heritage)
+- Bosque Museum (Local history and culture)
+- Meridian State Park (Lake, hiking, wildlife nearby)
+- Norse Historic District (Norwegian architecture)
+- Main Street Clifton (Antique shops, local eateries)
 
-### Admin Panel
-- [x] Hotel name/city configuration
-- [x] News category selection (7 categories)
-- [x] Timing settings (photo interval, weather/news refresh)
-- [x] Image upload and management
-- [x] Reset to default images functionality
+### Events Slide
+**Featured Annual Events:**
+- Bosque Art Classic (September) - National juried art show
+- Clifton Rodeo & Parade (June) - Traditional cowboy events
+- Bosque Tour de Norway (May) - Cycling event
+- Norwegian Country Christmas Tour (December) - Historic sites tour
+
+**Community Events:**
+- FallFest & Fireworks on the Bosque
+- Central Texas Youth Fair
+- Trick or Treat with Main Street (October)
+- Bosque County-Wide Garage Sale
+
+### Slide Rotation Order
+Photo → Photo → Weather Dashboard → Photo → Local Attractions → Photo → Weather Forecast → Photo → Events → (cycles)
 
 ### Backend APIs
-- [x] GET /api/settings - Hotel settings
-- [x] PUT /api/settings - Update settings
-- [x] GET /api/images - List images
-- [x] POST /api/images - Upload image
-- [x] DELETE /api/images/{id} - Delete image
-- [x] GET /api/weather - Current weather
-- [x] GET /api/weather/extended - Weather + forecast + hourly
-- [x] GET /api/news - News headlines
+- GET /api/settings, PUT /api/settings
+- GET /api/images, POST /api/images, DELETE /api/images/{id}
+- GET /api/weather, GET /api/weather/extended
+- GET /api/news
 
-## API Keys Configured
+### API Keys Configured
 - OpenWeatherMap: c0ca4a039347f2b57a7a55902d27bddb
 - NewsAPI.org: cb070f8c007f4ab396a629e24cd29c15
-
-## Slide Rotation Order
-1. Photo Slide 1
-2. Photo Slide 2
-3. **Weather Dashboard Slide**
-4. Photo Slide 3
-5. Photo Slide 4
-6. **Weather Forecast Slide**
-7. Photo Slide 5
-(cycles back to 1)
-
-## Prioritized Backlog
-### P0 (Critical) - DONE
-- All core display features implemented
-- Both weather slides implemented
-
-### P1 (High)
-- [ ] Hotel logo upload
-- [ ] Multiple language support
-
-### P2 (Medium)
-- [ ] Event/announcement overlay
-- [ ] Scheduled content display
-- [ ] QR code for hotel info
 
 ## Tech Stack
 - Frontend: React 19, Tailwind CSS, Framer Motion, Shadcn UI
 - Backend: FastAPI, Motor (MongoDB async)
 - APIs: OpenWeatherMap, NewsAPI.org
 
-## Next Tasks
-- Add hotel logo upload functionality
-- Consider event/announcement scheduling feature
+## Prioritized Backlog
+### P1 (High)
+- [ ] Hotel logo upload
+- [ ] Admin management for attractions/events content
+
+### P2 (Medium)
+- [ ] Custom announcement overlay
+- [ ] Multi-language support
