@@ -61,6 +61,8 @@ class Settings(BaseModel):
     display_width: float = 16.0  # width in inches
     display_height: float = 9.0  # height in inches
     enable_weather_animations: bool = True
+    attractions_per_slide: int = 6
+    attractions_auto_rotate: bool = True
 
 class SettingsUpdate(BaseModel):
     hotel_name: Optional[str] = None
@@ -76,6 +78,8 @@ class SettingsUpdate(BaseModel):
     display_width: Optional[float] = None
     display_height: Optional[float] = None
     enable_weather_animations: Optional[bool] = None
+    attractions_per_slide: Optional[int] = None
+    attractions_auto_rotate: Optional[bool] = None
 
 class HotelImage(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -117,6 +121,74 @@ class NewsHeadline(BaseModel):
     source: str
     url: str
     is_fallback: bool = False
+
+# ===== Attraction Model =====
+ATTRACTION_CATEGORIES = [
+    "dining", "shopping", "parks", "museums", "entertainment",
+    "family", "events", "outdoor", "hotel_recommendations"
+]
+
+class Attraction(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    description: str = ""
+    distance: str = ""
+    category: str = "dining"
+    image_url: str = ""
+    enabled: bool = True
+    order: int = 0
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+class AttractionCreate(BaseModel):
+    name: str
+    description: str = ""
+    distance: str = ""
+    category: str = "dining"
+    image_url: str = ""
+    enabled: bool = True
+
+class AttractionUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    distance: Optional[str] = None
+    category: Optional[str] = None
+    image_url: Optional[str] = None
+    enabled: Optional[bool] = None
+    order: Optional[int] = None
+
+# ===== Content Section Model =====
+CONTENT_TYPES = [
+    "announcement", "promotion", "welcome_message", "amenity",
+    "event", "emergency", "checkout_reminder"
+]
+
+class ContentItem(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    section_type: str
+    title: str
+    content: str = ""
+    enabled: bool = True
+    order: int = 0
+    priority: str = "normal"
+    icon: str = ""
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+class ContentItemCreate(BaseModel):
+    title: str
+    content: str = ""
+    enabled: bool = True
+    priority: str = "normal"
+    icon: str = ""
+
+class ContentItemUpdate(BaseModel):
+    title: Optional[str] = None
+    content: Optional[str] = None
+    enabled: Optional[bool] = None
+    order: Optional[int] = None
+    priority: Optional[str] = None
+    icon: Optional[str] = None
 
 # ===== Default/Fallback Data =====
 
@@ -496,6 +568,102 @@ async def get_news(category: Optional[str] = None):
                 h["is_fallback"] = True
             return [NewsHeadline(**h) for h in news_cache["data"]]
         return [NewsHeadline(**h) for h in FALLBACK_HEADLINES]
+
+# ===== Attractions Endpoints =====
+
+DEFAULT_ATTRACTIONS = [
+    {"name": "Bosque County Courthouse", "description": "Historic 1886 limestone courthouse in downtown", "distance": "0.3 miles", "category": "museums", "image_url": "https://images.unsplash.com/photo-1555883006-87e8e3c5f4cf?w=400", "enabled": True, "order": 0},
+    {"name": "Clifton Lutheran Church", "description": "Historic Rock Church celebrating Norwegian heritage since 1886", "distance": "0.5 miles", "category": "museums", "image_url": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400", "enabled": True, "order": 1},
+    {"name": "Bosque Museum", "description": "Preserving the history and culture of Bosque County", "distance": "0.4 miles", "category": "museums", "image_url": "https://images.unsplash.com/photo-1566127444979-b3d2b654e3d7?w=400", "enabled": True, "order": 2},
+    {"name": "Meridian State Park", "description": "Scenic park with lake, hiking trails, and wildlife", "distance": "12 miles", "category": "parks", "image_url": "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400", "enabled": True, "order": 3},
+    {"name": "Norse Historic District", "description": "Authentic Norwegian heritage and architecture", "distance": "8 miles", "category": "outdoor", "image_url": "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400", "enabled": True, "order": 4},
+    {"name": "Main Street Clifton", "description": "Charming downtown with antique shops and local eateries", "distance": "0.2 miles", "category": "shopping", "image_url": "https://images.unsplash.com/photo-1519999482648-25049ddd37b1?w=400", "enabled": True, "order": 5},
+]
+
+@api_router.get("/attractions", response_model=List[Attraction])
+async def get_attractions():
+    items = await db.attractions.find({}, {"_id": 0}).sort("order", 1).to_list(100)
+    if not items:
+        for i, a in enumerate(DEFAULT_ATTRACTIONS):
+            a["id"] = str(uuid.uuid4())
+            a["order"] = i
+            a["created_at"] = datetime.now(timezone.utc).isoformat()
+        await db.attractions.insert_many([dict(a) for a in DEFAULT_ATTRACTIONS])
+        items = await db.attractions.find({}, {"_id": 0}).sort("order", 1).to_list(100)
+    return [Attraction(**item) for item in items]
+
+@api_router.post("/attractions", response_model=Attraction)
+async def create_attraction(data: AttractionCreate):
+    count = await db.attractions.count_documents({})
+    item = Attraction(**data.model_dump(), order=count)
+    await db.attractions.insert_one(item.model_dump())
+    return item
+
+@api_router.put("/attractions/{attraction_id}", response_model=Attraction)
+async def update_attraction(attraction_id: str, data: AttractionUpdate):
+    update_data = {k: v for k, v in data.model_dump().items() if v is not None}
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    await db.attractions.update_one({"id": attraction_id}, {"$set": update_data})
+    item = await db.attractions.find_one({"id": attraction_id}, {"_id": 0})
+    if not item:
+        raise HTTPException(status_code=404, detail="Attraction not found")
+    return Attraction(**item)
+
+@api_router.delete("/attractions/{attraction_id}")
+async def delete_attraction(attraction_id: str):
+    result = await db.attractions.delete_one({"id": attraction_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Attraction not found")
+    return {"message": "Attraction deleted"}
+
+@api_router.post("/attractions/reorder")
+async def reorder_attractions(ids: List[str]):
+    for i, aid in enumerate(ids):
+        await db.attractions.update_one({"id": aid}, {"$set": {"order": i}})
+    return {"message": "Attractions reordered"}
+
+# ===== Content Section Endpoints =====
+
+@api_router.get("/content/{section_type}", response_model=List[ContentItem])
+async def get_content(section_type: str):
+    if section_type not in CONTENT_TYPES:
+        raise HTTPException(status_code=400, detail=f"Invalid section type. Valid types: {CONTENT_TYPES}")
+    items = await db.content.find({"section_type": section_type}, {"_id": 0}).sort("order", 1).to_list(100)
+    return [ContentItem(**item) for item in items]
+
+@api_router.post("/content/{section_type}", response_model=ContentItem)
+async def create_content(section_type: str, data: ContentItemCreate):
+    if section_type not in CONTENT_TYPES:
+        raise HTTPException(status_code=400, detail=f"Invalid section type. Valid types: {CONTENT_TYPES}")
+    count = await db.content.count_documents({"section_type": section_type})
+    item = ContentItem(**data.model_dump(), section_type=section_type, order=count)
+    await db.content.insert_one(item.model_dump())
+    return item
+
+@api_router.put("/content/{section_type}/{item_id}", response_model=ContentItem)
+async def update_content(section_type: str, item_id: str, data: ContentItemUpdate):
+    update_data = {k: v for k, v in data.model_dump().items() if v is not None}
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    await db.content.update_one({"id": item_id, "section_type": section_type}, {"$set": update_data})
+    item = await db.content.find_one({"id": item_id, "section_type": section_type}, {"_id": 0})
+    if not item:
+        raise HTTPException(status_code=404, detail="Content item not found")
+    return ContentItem(**item)
+
+@api_router.delete("/content/{section_type}/{item_id}")
+async def delete_content(section_type: str, item_id: str):
+    result = await db.content.delete_one({"id": item_id, "section_type": section_type})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Content item not found")
+    return {"message": "Content item deleted"}
+
+@api_router.post("/content/{section_type}/reorder")
+async def reorder_content(section_type: str, ids: List[str]):
+    for i, cid in enumerate(ids):
+        await db.content.update_one({"id": cid, "section_type": section_type}, {"$set": {"order": i}})
+    return {"message": "Content reordered"}
 
 # ===== Health Check =====
 

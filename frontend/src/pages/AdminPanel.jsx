@@ -25,7 +25,20 @@ import {
   RectangleVertical,
   Square,
   Ruler,
-  Ratio
+  Ratio,
+  Edit2,
+  Check,
+  FileText,
+  Megaphone,
+  Tag,
+  Heart,
+  Calendar,
+  AlertTriangle,
+  LogOut,
+  ChevronDown,
+  ChevronUp,
+  ToggleLeft,
+  ToggleRight
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -62,6 +75,28 @@ const ASPECT_PRESETS = [
   { value: "4:3", label: "4:3", orientation: "landscape", w: 4, h: 3, desc: "Standard Monitor" },
   { value: "3:4", label: "3:4", orientation: "portrait", w: 3, h: 4, desc: "Vertical Standard" },
   { value: "custom", label: "Custom", orientation: null, w: null, h: null, desc: "Custom Size" },
+];
+
+const ATTRACTION_CATEGORIES = [
+  { value: "dining", label: "Dining" },
+  { value: "shopping", label: "Shopping" },
+  { value: "parks", label: "Parks" },
+  { value: "museums", label: "Museums" },
+  { value: "entertainment", label: "Entertainment" },
+  { value: "family", label: "Family Activities" },
+  { value: "events", label: "Local Events" },
+  { value: "outdoor", label: "Outdoor" },
+  { value: "hotel_recommendations", label: "Hotel Picks" },
+];
+
+const CONTENT_SECTIONS = [
+  { type: "announcement", label: "Announcements", icon: Megaphone, desc: "Hotel announcements" },
+  { type: "promotion", label: "Promotions", icon: Tag, desc: "Special offers & deals" },
+  { type: "welcome_message", label: "Welcome Messages", icon: Heart, desc: "Guest welcome messages" },
+  { type: "amenity", label: "Amenities", icon: Building2, desc: "Hotel amenities" },
+  { type: "event", label: "Events", icon: Calendar, desc: "Upcoming events" },
+  { type: "emergency", label: "Emergency Info", icon: AlertTriangle, desc: "Emergency contacts & info" },
+  { type: "checkout_reminder", label: "Checkout", icon: LogOut, desc: "Checkout reminders" },
 ];
 
 // Drag and Drop Image Grid
@@ -401,6 +436,13 @@ export default function AdminPanel() {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [weather, setWeather] = useState(null);
+  const [attractions, setAttractions] = useState([]);
+  const [contentItems, setContentItems] = useState({});
+  const [activeContentType, setActiveContentType] = useState("announcement");
+  const [editingAttraction, setEditingAttraction] = useState(null);
+  const [newAttraction, setNewAttraction] = useState(null);
+  const [editingContent, setEditingContent] = useState(null);
+  const [newContent, setNewContent] = useState(null);
 
   const fetchSettings = useCallback(async () => {
     try {
@@ -431,11 +473,31 @@ export default function AdminPanel() {
     }
   }, []);
 
+  const fetchAttractions = useCallback(async () => {
+    try {
+      const response = await axios.get(`${API}/attractions`);
+      setAttractions(response.data);
+    } catch (error) {
+      console.error("Error fetching attractions:", error);
+    }
+  }, []);
+
+  const fetchContent = useCallback(async (sectionType) => {
+    try {
+      const response = await axios.get(`${API}/content/${sectionType}`);
+      setContentItems(prev => ({ ...prev, [sectionType]: response.data }));
+    } catch (error) {
+      console.error("Error fetching content:", error);
+    }
+  }, []);
+
   useEffect(() => {
     fetchSettings();
     fetchImages();
     fetchWeather();
-  }, [fetchSettings, fetchImages, fetchWeather]);
+    fetchAttractions();
+    CONTENT_SECTIONS.forEach(s => fetchContent(s.type));
+  }, [fetchSettings, fetchImages, fetchWeather, fetchAttractions, fetchContent]);
 
   const handleSaveSettings = async () => {
     setLoading(true);
@@ -531,7 +593,6 @@ export default function AdminPanel() {
     const isFlipping = (orientation === "portrait" && w > h) || (orientation === "landscape" && h > w);
     
     if (isFlipping) {
-      // Flip dimensions and update ratio
       const ratioMap = { "16:9": "9:16", "9:16": "16:9", "4:3": "3:4", "3:4": "4:3" };
       setSettings(prev => ({
         ...prev,
@@ -542,6 +603,106 @@ export default function AdminPanel() {
       }));
     } else {
       setSettings(prev => ({ ...prev, display_orientation: orientation }));
+    }
+  };
+
+  // ===== Attractions CRUD =====
+  const handleCreateAttraction = async () => {
+    if (!newAttraction?.name) return;
+    try {
+      const response = await axios.post(`${API}/attractions`, newAttraction);
+      setAttractions(prev => [...prev, response.data]);
+      setNewAttraction(null);
+      toast.success("Attraction added");
+    } catch (error) {
+      toast.error("Failed to add attraction");
+    }
+  };
+
+  const handleUpdateAttraction = async (id) => {
+    if (!editingAttraction) return;
+    try {
+      const response = await axios.put(`${API}/attractions/${id}`, editingAttraction);
+      setAttractions(prev => prev.map(a => a.id === id ? response.data : a));
+      setEditingAttraction(null);
+      toast.success("Attraction updated");
+    } catch (error) {
+      toast.error("Failed to update attraction");
+    }
+  };
+
+  const handleDeleteAttraction = async (id) => {
+    try {
+      await axios.delete(`${API}/attractions/${id}`);
+      setAttractions(prev => prev.filter(a => a.id !== id));
+      toast.success("Attraction deleted");
+    } catch (error) {
+      toast.error("Failed to delete attraction");
+    }
+  };
+
+  const handleToggleAttraction = async (item) => {
+    try {
+      const response = await axios.put(`${API}/attractions/${item.id}`, { enabled: !item.enabled });
+      setAttractions(prev => prev.map(a => a.id === item.id ? response.data : a));
+    } catch (error) {
+      toast.error("Failed to toggle attraction");
+    }
+  };
+
+  // ===== Content CRUD =====
+  const handleCreateContent = async () => {
+    if (!newContent?.title) return;
+    try {
+      const response = await axios.post(`${API}/content/${activeContentType}`, newContent);
+      setContentItems(prev => ({
+        ...prev,
+        [activeContentType]: [...(prev[activeContentType] || []), response.data]
+      }));
+      setNewContent(null);
+      toast.success("Content item added");
+    } catch (error) {
+      toast.error("Failed to add content");
+    }
+  };
+
+  const handleUpdateContent = async (id) => {
+    if (!editingContent) return;
+    try {
+      const response = await axios.put(`${API}/content/${activeContentType}/${id}`, editingContent);
+      setContentItems(prev => ({
+        ...prev,
+        [activeContentType]: (prev[activeContentType] || []).map(c => c.id === id ? response.data : c)
+      }));
+      setEditingContent(null);
+      toast.success("Content updated");
+    } catch (error) {
+      toast.error("Failed to update content");
+    }
+  };
+
+  const handleDeleteContent = async (id) => {
+    try {
+      await axios.delete(`${API}/content/${activeContentType}/${id}`);
+      setContentItems(prev => ({
+        ...prev,
+        [activeContentType]: (prev[activeContentType] || []).filter(c => c.id !== id)
+      }));
+      toast.success("Content deleted");
+    } catch (error) {
+      toast.error("Failed to delete content");
+    }
+  };
+
+  const handleToggleContent = async (item) => {
+    try {
+      const response = await axios.put(`${API}/content/${activeContentType}/${item.id}`, { enabled: !item.enabled });
+      setContentItems(prev => ({
+        ...prev,
+        [activeContentType]: (prev[activeContentType] || []).map(c => c.id === item.id ? response.data : c)
+      }));
+    } catch (error) {
+      toast.error("Failed to toggle content");
     }
   };
 
@@ -586,6 +747,14 @@ export default function AdminPanel() {
               <ImageIcon className="w-4 h-4" />
               Images
             </TabsTrigger>
+            <TabsTrigger value="attractions" className="gap-2" data-testid="tab-attractions">
+              <MapPin className="w-4 h-4" />
+              Attractions
+            </TabsTrigger>
+            <TabsTrigger value="content" className="gap-2" data-testid="tab-content">
+              <FileText className="w-4 h-4" />
+              Content
+            </TabsTrigger>
             <TabsTrigger value="settings" className="gap-2" data-testid="tab-settings">
               <Settings className="w-4 h-4" />
               Settings
@@ -629,6 +798,417 @@ export default function AdminPanel() {
                   onDelete={handleDeleteImage}
                   getImageUrl={getImageUrl}
                 />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Attractions Tab */}
+          <TabsContent value="attractions" className="space-y-6" data-testid="attractions-tab-content">
+            <Card className="bg-card border-white/10">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <MapPin className="w-5 h-5" />
+                      Local Attractions
+                    </CardTitle>
+                    <CardDescription>Manage attractions shown in the lobby display</CardDescription>
+                  </div>
+                  <Button 
+                    onClick={() => setNewAttraction({ name: "", description: "", distance: "", category: "dining", image_url: "", enabled: true })}
+                    className="gap-2"
+                    data-testid="add-attraction-button"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Attraction
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Attractions Settings */}
+                <div className="flex items-center gap-6 p-4 rounded-lg bg-muted/50 border border-white/5">
+                  <div className="space-y-1 flex-1">
+                    <Label>Attractions per slide</Label>
+                    <Input
+                      type="number"
+                      min="2"
+                      max="12"
+                      value={settings.attractions_per_slide || 6}
+                      onChange={(e) => setSettings({ ...settings, attractions_per_slide: parseInt(e.target.value) || 6 })}
+                      className="w-24"
+                      data-testid="attractions-per-slide-input"
+                    />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Label>Auto-rotate</Label>
+                    <Switch
+                      checked={settings.attractions_auto_rotate !== false}
+                      onCheckedChange={(checked) => setSettings({ ...settings, attractions_auto_rotate: checked })}
+                      data-testid="attractions-auto-rotate-toggle"
+                    />
+                  </div>
+                  <Button onClick={handleSaveSettings} disabled={loading} size="sm" className="gap-2">
+                    <Save className="w-3 h-3" />
+                    Save
+                  </Button>
+                </div>
+
+                {/* New Attraction Form */}
+                {newAttraction && (
+                  <div className="p-4 rounded-lg border-2 border-primary/30 bg-primary/5 space-y-3" data-testid="new-attraction-form">
+                    <p className="text-sm font-medium text-primary">New Attraction</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Input
+                        placeholder="Attraction name"
+                        value={newAttraction.name}
+                        onChange={(e) => setNewAttraction({ ...newAttraction, name: e.target.value })}
+                        data-testid="new-attraction-name"
+                      />
+                      <Select
+                        value={newAttraction.category}
+                        onValueChange={(value) => setNewAttraction({ ...newAttraction, category: value })}
+                      >
+                        <SelectTrigger data-testid="new-attraction-category">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ATTRACTION_CATEGORIES.map((cat) => (
+                            <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Input
+                      placeholder="Short description"
+                      value={newAttraction.description}
+                      onChange={(e) => setNewAttraction({ ...newAttraction, description: e.target.value })}
+                      data-testid="new-attraction-description"
+                    />
+                    <div className="grid grid-cols-2 gap-3">
+                      <Input
+                        placeholder="Distance (e.g., 2.5 miles)"
+                        value={newAttraction.distance}
+                        onChange={(e) => setNewAttraction({ ...newAttraction, distance: e.target.value })}
+                        data-testid="new-attraction-distance"
+                      />
+                      <Input
+                        placeholder="Image URL (optional)"
+                        value={newAttraction.image_url}
+                        onChange={(e) => setNewAttraction({ ...newAttraction, image_url: e.target.value })}
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button onClick={handleCreateAttraction} size="sm" className="gap-2" data-testid="save-new-attraction">
+                        <Check className="w-3 h-3" />
+                        Save
+                      </Button>
+                      <Button onClick={() => setNewAttraction(null)} variant="ghost" size="sm">
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Attractions List */}
+                <div className="space-y-2">
+                  {attractions.map((item) => (
+                    <div 
+                      key={item.id}
+                      className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
+                        item.enabled ? 'border-white/10 bg-card' : 'border-white/5 bg-muted/30 opacity-60'
+                      }`}
+                      data-testid={`attraction-item-${item.id}`}
+                    >
+                      {editingAttraction?.id === item.id ? (
+                        /* Edit Mode */
+                        <div className="flex-1 space-y-2">
+                          <div className="grid grid-cols-2 gap-2">
+                            <Input
+                              value={editingAttraction.name || item.name}
+                              onChange={(e) => setEditingAttraction({ ...editingAttraction, name: e.target.value })}
+                              data-testid={`edit-attraction-name-${item.id}`}
+                            />
+                            <Select
+                              value={editingAttraction.category || item.category}
+                              onValueChange={(value) => setEditingAttraction({ ...editingAttraction, category: value })}
+                            >
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                {ATTRACTION_CATEGORIES.map((cat) => (
+                                  <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <Input
+                            value={editingAttraction.description || item.description}
+                            onChange={(e) => setEditingAttraction({ ...editingAttraction, description: e.target.value })}
+                            placeholder="Description"
+                          />
+                          <Input
+                            value={editingAttraction.distance || item.distance}
+                            onChange={(e) => setEditingAttraction({ ...editingAttraction, distance: e.target.value })}
+                            placeholder="Distance"
+                          />
+                          <div className="flex gap-2">
+                            <Button onClick={() => handleUpdateAttraction(item.id)} size="sm" className="gap-1">
+                              <Check className="w-3 h-3" />
+                              Save
+                            </Button>
+                            <Button onClick={() => setEditingAttraction(null)} variant="ghost" size="sm">
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        /* View Mode */
+                        <>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium truncate">{item.name}</p>
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-white/10 text-muted-foreground flex-shrink-0">
+                                {ATTRACTION_CATEGORIES.find(c => c.value === item.category)?.label || item.category}
+                              </span>
+                            </div>
+                            <p className="text-sm text-muted-foreground truncate">{item.description}</p>
+                            {item.distance && <p className="text-xs text-muted-foreground mt-0.5">{item.distance}</p>}
+                          </div>
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => handleToggleAttraction(item)}
+                              data-testid={`toggle-attraction-${item.id}`}
+                            >
+                              {item.enabled ? <ToggleRight className="w-4 h-4 text-green-400" /> : <ToggleLeft className="w-4 h-4 text-muted-foreground" />}
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => setEditingAttraction({ id: item.id, name: item.name, description: item.description, distance: item.distance, category: item.category })}
+                              data-testid={`edit-attraction-${item.id}`}
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              className="h-8 w-8 text-destructive"
+                              onClick={() => handleDeleteAttraction(item.id)}
+                              data-testid={`delete-attraction-${item.id}`}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                  {attractions.length === 0 && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <MapPin className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                      <p>No attractions yet. Add one above.</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Content Tab */}
+          <TabsContent value="content" className="space-y-6" data-testid="content-tab">
+            <Card className="bg-card border-white/10">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="w-5 h-5" />
+                  Content Management
+                </CardTitle>
+                <CardDescription>Manage announcements, promotions, and other lobby content</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Section Type Selector */}
+                <div className="flex flex-wrap gap-2" data-testid="content-section-selector">
+                  {CONTENT_SECTIONS.map((section) => {
+                    const Icon = section.icon;
+                    const count = (contentItems[section.type] || []).length;
+                    return (
+                      <button
+                        key={section.type}
+                        onClick={() => setActiveContentType(section.type)}
+                        data-testid={`content-section-${section.type}`}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-all ${
+                          activeContentType === section.type
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-white/10 hover:border-white/25"
+                        }`}
+                      >
+                        <Icon className="w-4 h-4" />
+                        <span>{section.label}</span>
+                        {count > 0 && (
+                          <span className="text-xs bg-white/10 rounded-full px-1.5 py-0.5">{count}</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Active Section Header */}
+                <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                  <p className="text-sm text-muted-foreground">
+                    {CONTENT_SECTIONS.find(s => s.type === activeContentType)?.desc}
+                  </p>
+                  <Button 
+                    onClick={() => setNewContent({ title: "", content: "", enabled: true, priority: "normal", icon: "" })}
+                    size="sm"
+                    className="gap-2"
+                    data-testid="add-content-button"
+                  >
+                    <Plus className="w-3 h-3" />
+                    Add {CONTENT_SECTIONS.find(s => s.type === activeContentType)?.label?.replace(/s$/, '') || "Item"}
+                  </Button>
+                </div>
+
+                {/* New Content Form */}
+                {newContent && (
+                  <div className="p-4 rounded-lg border-2 border-primary/30 bg-primary/5 space-y-3" data-testid="new-content-form">
+                    <p className="text-sm font-medium text-primary">New {CONTENT_SECTIONS.find(s => s.type === activeContentType)?.label?.replace(/s$/, '')}</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Input
+                        placeholder="Title"
+                        value={newContent.title}
+                        onChange={(e) => setNewContent({ ...newContent, title: e.target.value })}
+                        data-testid="new-content-title"
+                      />
+                      <Select
+                        value={newContent.priority}
+                        onValueChange={(value) => setNewContent({ ...newContent, priority: value })}
+                      >
+                        <SelectTrigger data-testid="new-content-priority">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="normal">Normal</SelectItem>
+                          <SelectItem value="high">High</SelectItem>
+                          <SelectItem value="urgent">Urgent</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Input
+                      placeholder="Content / description"
+                      value={newContent.content}
+                      onChange={(e) => setNewContent({ ...newContent, content: e.target.value })}
+                      data-testid="new-content-body"
+                    />
+                    <div className="flex gap-2">
+                      <Button onClick={handleCreateContent} size="sm" className="gap-2" data-testid="save-new-content">
+                        <Check className="w-3 h-3" />
+                        Save
+                      </Button>
+                      <Button onClick={() => setNewContent(null)} variant="ghost" size="sm">
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Content Items List */}
+                <div className="space-y-2">
+                  {(contentItems[activeContentType] || []).map((item) => (
+                    <div 
+                      key={item.id}
+                      className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
+                        item.enabled ? 'border-white/10 bg-card' : 'border-white/5 bg-muted/30 opacity-60'
+                      }`}
+                      data-testid={`content-item-${item.id}`}
+                    >
+                      {editingContent?.id === item.id ? (
+                        <div className="flex-1 space-y-2">
+                          <div className="grid grid-cols-2 gap-2">
+                            <Input
+                              value={editingContent.title || item.title}
+                              onChange={(e) => setEditingContent({ ...editingContent, title: e.target.value })}
+                            />
+                            <Select
+                              value={editingContent.priority || item.priority}
+                              onValueChange={(value) => setEditingContent({ ...editingContent, priority: value })}
+                            >
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="normal">Normal</SelectItem>
+                                <SelectItem value="high">High</SelectItem>
+                                <SelectItem value="urgent">Urgent</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <Input
+                            value={editingContent.content || item.content}
+                            onChange={(e) => setEditingContent({ ...editingContent, content: e.target.value })}
+                            placeholder="Content"
+                          />
+                          <div className="flex gap-2">
+                            <Button onClick={() => handleUpdateContent(item.id)} size="sm" className="gap-1">
+                              <Check className="w-3 h-3" />
+                              Save
+                            </Button>
+                            <Button onClick={() => setEditingContent(null)} variant="ghost" size="sm">
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium truncate">{item.title}</p>
+                              {item.priority !== "normal" && (
+                                <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${
+                                  item.priority === "urgent" ? "bg-red-500/20 text-red-400" : "bg-yellow-500/20 text-yellow-400"
+                                }`}>
+                                  {item.priority}
+                                </span>
+                              )}
+                            </div>
+                            {item.content && <p className="text-sm text-muted-foreground truncate">{item.content}</p>}
+                          </div>
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => handleToggleContent(item)}
+                            >
+                              {item.enabled ? <ToggleRight className="w-4 h-4 text-green-400" /> : <ToggleLeft className="w-4 h-4 text-muted-foreground" />}
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => setEditingContent({ id: item.id, title: item.title, content: item.content, priority: item.priority })}
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              className="h-8 w-8 text-destructive"
+                              onClick={() => handleDeleteContent(item.id)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                  {(contentItems[activeContentType] || []).length === 0 && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <FileText className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                      <p>No {CONTENT_SECTIONS.find(s => s.type === activeContentType)?.label?.toLowerCase()} yet.</p>
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
