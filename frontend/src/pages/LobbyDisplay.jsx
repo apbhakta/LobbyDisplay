@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, ArrowUp, ArrowDown, Droplets, Wind, Newspaper } from "lucide-react";
+import { MapPin, ArrowUp, ArrowDown, Droplets, Wind, Newspaper, Camera } from "lucide-react";
 import axios from "axios";
 import WeatherBackground, { getWeatherTheme } from "../components/WeatherBackground";
 import WeatherSlide from "../components/WeatherSlide";
@@ -10,7 +10,6 @@ import EventsSlide from "../components/EventsSlide";
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-// Slide types
 const SLIDE_TYPES = {
   PHOTO: 'photo',
   WEATHER: 'weather',
@@ -18,181 +17,127 @@ const SLIDE_TYPES = {
   EVENTS: 'events',
 };
 
-// Glass panel component with weather-reactive styling
+// Glass panel component
 const GlassPanel = ({ children, className = "", theme = "sunny" }) => {
   const getGlassStyle = () => {
     const baseStyle = "backdrop-blur-xl border border-white/20 shadow-2xl";
     switch (theme) {
-      case "sunny":
-        return `${baseStyle} bg-white/10`;
-      case "night":
-        return `${baseStyle} bg-black/20`;
-      case "rain":
-      case "storm":
-        return `${baseStyle} bg-black/25`;
-      case "snow":
-        return `${baseStyle} bg-white/30`;
-      case "fog":
-        return `${baseStyle} bg-white/20`;
-      case "cloudy":
-        return `${baseStyle} bg-white/15`;
-      default:
-        return `${baseStyle} bg-white/10`;
+      case "snow": return `${baseStyle} bg-white/30`;
+      case "rain": case "storm": return `${baseStyle} bg-black/25`;
+      case "night": return `${baseStyle} bg-black/20`;
+      case "fog": return `${baseStyle} bg-white/20`;
+      case "cloudy": return `${baseStyle} bg-white/15`;
+      default: return `${baseStyle} bg-white/10`;
     }
   };
-
   return (
     <motion.div 
       className={`rounded-2xl ${getGlassStyle()} ${className}`}
-      animate={{ 
-        boxShadow: [
-          "0 8px 32px rgba(0,0,0,0.1)",
-          "0 12px 40px rgba(0,0,0,0.15)",
-          "0 8px 32px rgba(0,0,0,0.1)"
-        ]
-      }}
-      transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+      animate={{ boxShadow: ["0 8px 32px rgba(0,0,0,0.1)", "0 12px 40px rgba(0,0,0,0.15)", "0 8px 32px rgba(0,0,0,0.1)"] }}
+      transition={{ duration: 4, repeat: Infinity }}
     >
       {children}
     </motion.div>
   );
 };
 
-// Animated Clock Component
-const LiveClock = ({ theme, isPortrait }) => {
+// Clock
+const LiveClock = ({ theme, size = "large" }) => {
   const [time, setTime] = useState(new Date());
-
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
-
   const hours = time.getHours();
   const minutes = time.getMinutes().toString().padStart(2, "0");
-  const seconds = time.getSeconds().toString().padStart(2, "0");
   const ampm = hours >= 12 ? "PM" : "AM";
   const displayHours = hours % 12 || 12;
-
   const isSnow = theme === "snow";
   const textColor = isSnow ? "text-slate-800" : "text-white";
   const mutedColor = isSnow ? "text-slate-600" : "text-white/70";
 
+  const fontSize = size === "compact" ? "clamp(2rem, 5vw, 3.5rem)" : "clamp(3rem, 7vw, 5rem)";
+
   return (
-    <div className={isPortrait ? "text-center" : "text-right"}>
+    <div data-testid="live-clock">
       <motion.div 
         className={`font-light tracking-tight leading-none ${textColor}`}
-        style={{ fontSize: isPortrait ? "clamp(3rem, 8vw, 5rem)" : "clamp(4rem, 10vw, 8rem)" }}
+        style={{ fontSize }}
         animate={{ opacity: [0.95, 1, 0.95] }}
         transition={{ duration: 2, repeat: Infinity }}
       >
         <span>{displayHours}</span>
-        <motion.span 
-          animate={{ opacity: [1, 0.4, 1] }}
-          transition={{ duration: 1, repeat: Infinity }}
-        >
-          :
-        </motion.span>
+        <motion.span animate={{ opacity: [1, 0.4, 1] }} transition={{ duration: 1, repeat: Infinity }}>:</motion.span>
         <span>{minutes}</span>
-        <span className={`${isPortrait ? 'text-2xl' : 'text-3xl md:text-4xl'} ml-2 opacity-60`}>{seconds}</span>
-        <span className={`${isPortrait ? 'text-xl' : 'text-2xl md:text-3xl'} ml-3 ${mutedColor}`}>{ampm}</span>
+        <span className={`text-lg ml-2 ${mutedColor}`}>{ampm}</span>
       </motion.div>
     </div>
   );
 };
 
-// Date Display
-const DateDisplay = ({ theme, isPortrait }) => {
+// Date
+const DateDisplay = ({ theme }) => {
   const [date, setDate] = useState(new Date());
-
   useEffect(() => {
     const timer = setInterval(() => setDate(new Date()), 60000);
     return () => clearInterval(timer);
   }, []);
-
   const isSnow = theme === "snow";
   const textColor = isSnow ? "text-slate-700" : "text-white/80";
-
-  const dateStr = date.toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric"
-  });
-
+  const dateStr = date.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
   return (
     <motion.p 
-      className={`${isPortrait ? 'text-lg' : 'text-xl md:text-2xl'} font-light tracking-wider ${textColor} ${isPortrait ? 'text-center' : 'text-right'} mt-2`}
+      className={`text-sm font-light tracking-wider ${textColor} mt-1`}
       animate={{ opacity: [0.8, 1, 0.8] }}
       transition={{ duration: 4, repeat: Infinity }}
+      data-testid="date-display"
     >
       {dateStr}
     </motion.p>
   );
 };
 
-// Weather Widget
-const WeatherWidget = ({ weather, theme, isPortrait }) => {
+// Compact Weather Widget for the info panel
+const WeatherWidget = ({ weather, theme }) => {
   if (!weather) return null;
-
   const isSnow = theme === "snow";
   const textColor = isSnow ? "text-slate-800" : "text-white";
   const mutedColor = isSnow ? "text-slate-600" : "text-white/70";
   const iconUrl = `https://openweathermap.org/img/wn/${weather.icon || "02d"}@4x.png`;
 
   return (
-    <GlassPanel theme={theme} className={isPortrait ? "p-4 md:p-5" : "p-6 md:p-8"}>
-      {/* Location */}
-      <div className="flex items-center gap-2 mb-3">
-        <MapPin className={`w-4 h-4 ${mutedColor}`} />
-        <span className={`text-base ${mutedColor}`}>{weather.city}, Texas</span>
+    <GlassPanel theme={theme} className="p-4" data-testid="weather-widget">
+      <div className="flex items-center gap-2 mb-2">
+        <MapPin className={`w-3 h-3 ${mutedColor}`} />
+        <span className={`text-xs ${mutedColor}`}>{weather.city}, Texas</span>
       </div>
-
-      <div className={`flex items-center ${isPortrait ? 'gap-4' : 'gap-6'}`}>
-        {/* Weather Icon */}
+      <div className="flex items-center gap-3">
         <motion.img
           src={iconUrl}
           alt={weather.condition}
-          className={isPortrait ? "w-16 h-16 md:w-20 md:h-20" : "w-24 h-24 md:w-32 md:h-32"}
-          animate={{ y: [-3, 3, -3] }}
+          className="w-14 h-14"
+          animate={{ y: [-2, 2, -2] }}
           transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
         />
-
-        {/* Temperature */}
         <div>
           <div className="flex items-start">
-            <motion.span 
-              className={`${isPortrait ? 'text-4xl md:text-5xl' : 'text-6xl md:text-7xl'} font-light ${textColor}`}
-              animate={{ opacity: [0.9, 1, 0.9] }}
-              transition={{ duration: 3, repeat: Infinity }}
-            >
-              {Math.round(weather.temp)}
-            </motion.span>
-            <span className={`${isPortrait ? 'text-xl' : 'text-3xl'} ${mutedColor} mt-1`}>°F</span>
+            <span className={`text-3xl font-light ${textColor}`}>{Math.round(weather.temp)}</span>
+            <span className={`text-sm ${mutedColor} mt-0.5`}>°F</span>
           </div>
-          <p className={`text-base ${mutedColor} capitalize mt-1`}>{weather.condition}</p>
+          <p className={`text-xs ${mutedColor} capitalize`}>{weather.condition}</p>
         </div>
-
-        {/* Details */}
-        <div className="ml-4 space-y-2">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-1">
-              <ArrowUp className="w-4 h-4 text-orange-400" />
-              <span className={textColor}>{Math.round(weather.temp_max)}°</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <ArrowDown className="w-4 h-4 text-blue-400" />
-              <span className={textColor}>{Math.round(weather.temp_min)}°</span>
-            </div>
+        <div className="ml-auto space-y-1">
+          <div className="flex items-center gap-2 text-xs">
+            <ArrowUp className="w-3 h-3 text-orange-400" />
+            <span className={textColor}>{Math.round(weather.temp_max)}°</span>
+            <ArrowDown className="w-3 h-3 text-blue-400" />
+            <span className={textColor}>{Math.round(weather.temp_min)}°</span>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-1">
-              <Droplets className="w-4 h-4 text-blue-300" />
-              <span className={mutedColor}>{weather.humidity}%</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Wind className="w-4 h-4 text-cyan-300" />
-              <span className={mutedColor}>{weather.wind_speed} mph</span>
-            </div>
+          <div className="flex items-center gap-2 text-xs">
+            <Droplets className="w-3 h-3 text-blue-300" />
+            <span className={mutedColor}>{weather.humidity}%</span>
+            <Wind className="w-3 h-3 text-cyan-300" />
+            <span className={mutedColor}>{weather.wind_speed}mph</span>
           </div>
         </div>
       </div>
@@ -203,36 +148,44 @@ const WeatherWidget = ({ weather, theme, isPortrait }) => {
 // News Headline
 const NewsHeadline = ({ headline, theme }) => {
   if (!headline) return null;
-
   const isSnow = theme === "snow";
   const textColor = isSnow ? "text-slate-800" : "text-white";
   const mutedColor = isSnow ? "text-slate-600" : "text-white/60";
 
   return (
-    <GlassPanel theme={theme} className="p-4 md:p-5">
-      <div className="flex items-start gap-3">
-        <div className="p-2 rounded-lg bg-white/10">
-          <Newspaper className={`w-5 h-5 ${mutedColor}`} />
-        </div>
-        <div className="flex-1">
-          <motion.p 
-            className={`text-base md:text-lg leading-relaxed ${textColor}`}
-            animate={{ opacity: [0.9, 1, 0.9] }}
-            transition={{ duration: 4, repeat: Infinity }}
-          >
-            {headline.title}
-          </motion.p>
-          <p className={`text-sm ${mutedColor} mt-1`}>{headline.source}</p>
+    <GlassPanel theme={theme} className="p-3" data-testid="news-headline">
+      <div className="flex items-start gap-2">
+        <Newspaper className={`w-4 h-4 mt-0.5 flex-shrink-0 ${mutedColor}`} />
+        <div className="min-w-0">
+          <p className={`text-xs leading-relaxed ${textColor} line-clamp-2`}>{headline.title}</p>
+          <p className={`text-xs ${mutedColor} mt-1`}>{headline.source}</p>
         </div>
       </div>
     </GlassPanel>
   );
 };
 
+// Empty state when no images uploaded
+const EmptyPhotoState = ({ theme }) => (
+  <div className="w-full h-full flex items-center justify-center" data-testid="empty-photo-state">
+    <WeatherBackground condition="clear" icon="01d" />
+    <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900" />
+    <motion.div 
+      className="relative z-10 text-center"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 0.3 }}
+      transition={{ duration: 2 }}
+    >
+      <Camera className="w-16 h-16 text-white/20 mx-auto mb-4" />
+      <p className="text-white/15 text-lg tracking-widest uppercase">Upload photos in admin panel</p>
+    </motion.div>
+  </div>
+);
+
 // Main Lobby Display
 export default function LobbyDisplay() {
   const [settings, setSettings] = useState({
-    hotel_name: "Velkommen Inn",
+    hotel_name: "",
     city: "Clifton, Texas",
     photo_interval: 8,
     weather_slide_duration: 15,
@@ -257,13 +210,11 @@ export default function LobbyDisplay() {
   const [attractions, setAttractions] = useState([]);
   const [localEvents, setLocalEvents] = useState([]);
 
-  // Get current theme
   const currentTheme = useMemo(() => {
     if (!weather) return "sunny";
     return getWeatherTheme(weather.condition, weather.icon);
   }, [weather]);
 
-  // Fetch functions
   const fetchSettings = useCallback(async () => {
     try {
       const response = await axios.get(`${API}/settings`);
@@ -288,13 +239,11 @@ export default function LobbyDisplay() {
       setWeather(response.data.current);
       setForecast(response.data.forecast || []);
     } catch (error) {
-      console.error("Error fetching weather:", error);
-      // Fallback to basic weather
       try {
         const basicResponse = await axios.get(`${API}/weather`);
         setWeather(basicResponse.data);
       } catch (e) {
-        console.error("Error fetching basic weather:", e);
+        console.error("Error fetching weather:", e);
       }
     }
   }, []);
@@ -326,7 +275,6 @@ export default function LobbyDisplay() {
     }
   }, []);
 
-  // Initialize
   useEffect(() => {
     fetchSettings();
     fetchImages();
@@ -336,105 +284,49 @@ export default function LobbyDisplay() {
     fetchLocalEvents();
   }, [fetchSettings, fetchImages, fetchWeather, fetchNews]);
 
-  // Build slides array
+  // Build slides
   useEffect(() => {
     const newSlides = [];
     const photoInterval = settings.photo_interval || 8;
     const weatherDuration = settings.weather_slide_duration || 15;
-    const specialDuration = 12; // seconds for attractions/events slides
-    
-    // Add photo slides
+    const specialDuration = 12;
+
     images.forEach((img, index) => {
-      newSlides.push({ 
-        type: SLIDE_TYPES.PHOTO, 
-        data: img, 
-        id: `photo-${index}`,
-        duration: photoInterval * 1000
-      });
+      newSlides.push({ type: SLIDE_TYPES.PHOTO, data: img, id: `photo-${index}`, duration: photoInterval * 1000 });
     });
-    
-    // Insert special slides into the rotation
-    // Pattern: photos → attractions → photos → weather → photos → events
+
     if (newSlides.length >= 6) {
-      // After 2nd photo: attractions
-      newSlides.splice(2, 0, { 
-        type: SLIDE_TYPES.ATTRACTIONS, 
-        id: 'attractions',
-        duration: specialDuration * 1000
-      });
-      // After 5th item (3 photos + attractions + 1 photo): weather
-      newSlides.splice(5, 0, { 
-        type: SLIDE_TYPES.WEATHER, 
-        id: 'weather',
-        duration: weatherDuration * 1000
-      });
-      // After 8th item: events
+      newSlides.splice(2, 0, { type: SLIDE_TYPES.ATTRACTIONS, id: 'attractions', duration: specialDuration * 1000 });
+      newSlides.splice(5, 0, { type: SLIDE_TYPES.WEATHER, id: 'weather', duration: weatherDuration * 1000 });
       if (newSlides.length > 7) {
-        newSlides.splice(8, 0, { 
-          type: SLIDE_TYPES.EVENTS, 
-          id: 'events',
-          duration: specialDuration * 1000
-        });
+        newSlides.splice(8, 0, { type: SLIDE_TYPES.EVENTS, id: 'events', duration: specialDuration * 1000 });
       } else {
-        newSlides.push({ 
-          type: SLIDE_TYPES.EVENTS, 
-          id: 'events',
-          duration: specialDuration * 1000
-        });
+        newSlides.push({ type: SLIDE_TYPES.EVENTS, id: 'events', duration: specialDuration * 1000 });
       }
-    } else if (newSlides.length >= 3) {
-      newSlides.splice(2, 0, { 
-        type: SLIDE_TYPES.ATTRACTIONS, 
-        id: 'attractions',
-        duration: specialDuration * 1000
-      });
-      newSlides.push({ 
-        type: SLIDE_TYPES.WEATHER, 
-        id: 'weather',
-        duration: weatherDuration * 1000
-      });
-      newSlides.push({ 
-        type: SLIDE_TYPES.EVENTS, 
-        id: 'events',
-        duration: specialDuration * 1000
-      });
+    } else if (newSlides.length >= 1) {
+      newSlides.push({ type: SLIDE_TYPES.ATTRACTIONS, id: 'attractions', duration: specialDuration * 1000 });
+      newSlides.push({ type: SLIDE_TYPES.WEATHER, id: 'weather', duration: weatherDuration * 1000 });
+      newSlides.push({ type: SLIDE_TYPES.EVENTS, id: 'events', duration: specialDuration * 1000 });
     } else {
-      // Few or no photos — add all special slides
-      newSlides.push({ 
-        type: SLIDE_TYPES.ATTRACTIONS, 
-        id: 'attractions',
-        duration: specialDuration * 1000
-      });
-      newSlides.push({ 
-        type: SLIDE_TYPES.WEATHER, 
-        id: 'weather',
-        duration: weatherDuration * 1000
-      });
-      newSlides.push({ 
-        type: SLIDE_TYPES.EVENTS, 
-        id: 'events',
-        duration: specialDuration * 1000
-      });
+      // No photos: only special slides
+      newSlides.push({ type: SLIDE_TYPES.WEATHER, id: 'weather', duration: weatherDuration * 1000 });
+      newSlides.push({ type: SLIDE_TYPES.ATTRACTIONS, id: 'attractions', duration: specialDuration * 1000 });
+      newSlides.push({ type: SLIDE_TYPES.EVENTS, id: 'events', duration: specialDuration * 1000 });
     }
-    
+
     setSlides(newSlides);
   }, [images, settings.photo_interval, settings.weather_slide_duration]);
 
-  // Rotate slides with variable duration
   useEffect(() => {
     if (slides.length === 0) return;
-    
     const currentSlideData = slides[currentSlideIndex];
     const duration = currentSlideData?.duration || 8000;
-    
     const timer = setTimeout(() => {
       setCurrentSlideIndex((prev) => (prev + 1) % slides.length);
     }, duration);
-    
     return () => clearTimeout(timer);
   }, [slides, currentSlideIndex]);
 
-  // Rotate headlines
   useEffect(() => {
     if (headlines.length === 0) return;
     const interval = setInterval(() => {
@@ -443,13 +335,11 @@ export default function LobbyDisplay() {
     return () => clearInterval(interval);
   }, [headlines.length]);
 
-  // Refresh weather every 10 minutes
   useEffect(() => {
     const interval = setInterval(fetchWeather, 10 * 60 * 1000);
     return () => clearInterval(interval);
   }, [fetchWeather]);
 
-  // Refresh news every 30 minutes
   useEffect(() => {
     const interval = setInterval(fetchNews, 30 * 60 * 1000);
     return () => clearInterval(interval);
@@ -457,7 +347,7 @@ export default function LobbyDisplay() {
 
   const currentSlide = slides[currentSlideIndex];
   const currentHeadline = headlines[currentHeadlineIndex];
-  const currentTime = useMemo(() => new Date(), [currentSlideIndex]); // Update on slide change
+  const currentTime = useMemo(() => new Date(), [currentSlideIndex]);
 
   const getImageUrl = (image) => {
     if (!image) return "";
@@ -465,200 +355,133 @@ export default function LobbyDisplay() {
     return `${BACKEND_URL}${image.url}`;
   };
 
-  // Display settings
   const isPortrait = settings.display_orientation === "portrait";
   const scale = settings.display_scale / 100;
-  const layout = settings.widget_layout || "bottom-left";
   const wScale = settings.widget_scale || 1;
-  const fScale = settings.font_scale || 1;
-  const pad = settings.widget_padding || 48;
-  const gap = settings.widget_spacing || 16;
-
   const isSnow = currentTheme === "snow";
-  const textColor = isSnow ? "text-slate-800" : "text-white";
 
-  // Widget sizing style helper
-  const widgetStyle = { transform: `scale(${wScale})`, transformOrigin: 'inherit' };
-  const fontStyle = { fontSize: `${fScale}em` };
+  // =========================================
+  // PHOTO SLIDE: Separated layout — photo is hero, widgets in their own panel
+  // =========================================
+  const renderPhotoSlide = () => {
+    const hasImage = currentSlide?.data;
+    const widgetStyle = { transform: `scale(${wScale})`, transformOrigin: 'top left' };
 
-  // Render the widget set (hotel name, clock, weather, news)
-  const renderHotelName = (align = "left") => (
-    <motion.div
-      className={align === "center" ? "text-center" : ""}
-      initial={{ opacity: 0, y: -20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 1 }}
-      style={widgetStyle}
-    >
-      <h1 className={`font-light tracking-widest uppercase ${textColor}`} style={{ fontSize: `${Math.max(1.5, 2.25 * fScale)}rem` }}>
-        {settings.hotel_name}
-      </h1>
-      <p className={`${isSnow ? "text-slate-600" : "text-white/60"} mt-1`} style={{ fontSize: `${fScale}rem` }}>
-        Welcome
-      </p>
-    </motion.div>
-  );
-
-  const renderClock = (align = "right") => (
-    <motion.div
-      initial={{ opacity: 0, y: -20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 1, delay: 0.2 }}
-      style={widgetStyle}
-    >
-      <LiveClock theme={currentTheme} isPortrait={align === "center"} />
-      <DateDisplay theme={currentTheme} isPortrait={align === "center"} />
-    </motion.div>
-  );
-
-  const renderWeather = () => (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 1, delay: 0.4 }}
-      style={widgetStyle}
-    >
-      <WeatherWidget weather={weather} theme={currentTheme} isPortrait={isPortrait} />
-    </motion.div>
-  );
-
-  const renderNews = () => (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 1, delay: 0.6 }}
-      style={widgetStyle}
-    >
-      <AnimatePresence mode="wait">
+    // Info panel content — clock, weather, news
+    const infoContent = (
+      <div className="flex flex-col h-full justify-between" style={widgetStyle}>
+        {/* Clock & Date */}
         <motion.div
-          key={currentHeadlineIndex}
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: -15 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -10 }}
           transition={{ duration: 0.8 }}
         >
-          <NewsHeadline headline={currentHeadline} theme={currentTheme} />
+          <LiveClock theme={currentTheme} size="compact" />
+          <DateDisplay theme={currentTheme} />
         </motion.div>
-      </AnimatePresence>
-    </motion.div>
-  );
 
-  // Layout renderers for photo slides
-  const renderPhotoLayout = () => {
-    const p = `${pad}px`;
-    const g = `${gap}px`;
+        <div className="flex-1" />
+
+        {/* Weather */}
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.2 }}
+          className="mb-3"
+        >
+          <WeatherWidget weather={weather} theme={currentTheme} />
+        </motion.div>
+
+        {/* News */}
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.4 }}
+        >
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentHeadlineIndex}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.6 }}
+            >
+              <NewsHeadline headline={currentHeadline} theme={currentTheme} />
+            </motion.div>
+          </AnimatePresence>
+        </motion.div>
+      </div>
+    );
 
     if (isPortrait) {
-      // Portrait always uses stacked layout
+      // PORTRAIT: Photo on top (65%), info panel below (35%)
       return (
-        <div className="absolute inset-0 z-10 flex flex-col" style={{ padding: p, gap: g }}>
-          <div className="text-center">{renderHotelName("center")}</div>
-          <div className="text-center">{renderClock("center")}</div>
-          <div className="flex-1" />
-          {renderWeather()}
-          {renderNews()}
+        <div className="w-full h-full flex flex-col" data-testid="photo-slide">
+          <WeatherBackground condition={weather?.condition} icon={weather?.icon} />
+          
+          {/* Photo area — hero */}
+          <div className="relative flex-[65] overflow-hidden">
+            {hasImage ? (
+              <motion.img
+                src={getImageUrl(currentSlide.data)}
+                alt="Hotel"
+                className="w-full h-full object-cover"
+                initial={{ scale: 1.05 }}
+                animate={{ scale: 1 }}
+                transition={{ duration: 8, ease: "easeOut" }}
+              />
+            ) : (
+              <EmptyPhotoState theme={currentTheme} />
+            )}
+            {/* Subtle bottom fade into panel */}
+            <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-slate-900/80 to-transparent" />
+          </div>
+
+          {/* Info panel — separated, no overlap */}
+          <div className="relative flex-[35] bg-slate-900/95 backdrop-blur-sm px-6 py-5 z-10">
+            {infoContent}
+          </div>
         </div>
       );
     }
 
-    switch (layout) {
-      case "top-right":
-        return (
-          <div className="absolute inset-0 z-10 flex flex-col" style={{ padding: p, gap: g }}>
-            <div className="flex justify-between items-start" style={{ gap: g }}>
-              {renderClock("left")}
-              <div className="flex flex-col items-end" style={{ gap: g }}>
-                {renderWeather()}
-                <div className="max-w-md">{renderNews()}</div>
-              </div>
-            </div>
-            <div className="flex-1" />
-            <div>{renderHotelName()}</div>
-          </div>
-        );
+    // LANDSCAPE: Photo on left (68%), info panel on right (32%)
+    return (
+      <div className="w-full h-full flex" data-testid="photo-slide">
+        <WeatherBackground condition={weather?.condition} icon={weather?.icon} />
 
-      case "bottom-bar":
-        return (
-          <div className="absolute inset-0 z-10 flex flex-col" style={{ padding: p }}>
-            <div className="flex justify-between items-start">
-              {renderHotelName()}
-              {renderClock()}
-            </div>
-            <div className="flex-1" />
-            <div className="flex items-end justify-between" style={{ gap: g }}>
-              <div style={{ flex: '0 0 auto' }}>{renderWeather()}</div>
-              <div style={{ flex: '1 1 auto', maxWidth: '40%' }}>{renderNews()}</div>
-              <div className="text-right">
-                <motion.div
-                  className={`text-sm ${isSnow ? "text-slate-600" : "text-white/60"}`}
-                  animate={{ opacity: [0.6, 1, 0.6] }}
-                  transition={{ duration: 3, repeat: Infinity }}
-                >
-                  {settings.city}
-                </motion.div>
-              </div>
-            </div>
-          </div>
-        );
+        {/* Photo area — hero, takes majority of screen */}
+        <div className="relative flex-[68] overflow-hidden">
+          {hasImage ? (
+            <motion.img
+              src={getImageUrl(currentSlide.data)}
+              alt="Hotel"
+              className="w-full h-full object-cover"
+              initial={{ scale: 1.05 }}
+              animate={{ scale: 1 }}
+              transition={{ duration: 8, ease: "easeOut" }}
+            />
+          ) : (
+            <EmptyPhotoState theme={currentTheme} />
+          )}
+          {/* Subtle right-edge fade */}
+          <div className="absolute top-0 right-0 bottom-0 w-6 bg-gradient-to-l from-slate-900/60 to-transparent" />
+        </div>
 
-      case "centered":
-        return (
-          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center" style={{ padding: p, gap: g }}>
-            <div className="text-center">{renderHotelName("center")}</div>
-            <div className="text-center">{renderClock("center")}</div>
-            <div style={{ height: gap }} />
-            {renderWeather()}
-            <div className="max-w-lg w-full">{renderNews()}</div>
-          </div>
-        );
-
-      case "split":
-        return (
-          <div className="absolute inset-0 z-10 flex">
-            {/* Left: empty (photo shows through) */}
-            <div className="flex-1" />
-            {/* Right: info panel */}
-            <div 
-              className="w-[40%] flex flex-col justify-between bg-black/40 backdrop-blur-sm"
-              style={{ padding: p, gap: g }}
-            >
-              <div>
-                {renderHotelName()}
-                <div className="mt-4">{renderClock("left")}</div>
-              </div>
-              <div className="space-y-4">
-                {renderWeather()}
-                {renderNews()}
-              </div>
-            </div>
-          </div>
-        );
-
-      case "bottom-left":
-      default:
-        return (
-          <div className="absolute inset-0 z-10 flex flex-col" style={{ padding: p, gap: g }}>
-            <div className="flex justify-between items-start">
-              {renderHotelName()}
-              {renderClock()}
-            </div>
-            <div className="flex-1" />
-            <div className="flex justify-between items-end" style={{ gap: `${gap * 2}px` }}>
-              {renderWeather()}
-              <div className="max-w-lg">{renderNews()}</div>
-            </div>
-          </div>
-        );
-    }
+        {/* Info panel — completely separated from photo */}
+        <div className="relative flex-[32] bg-slate-900/95 backdrop-blur-sm p-6 z-10 flex flex-col">
+          {infoContent}
+        </div>
+      </div>
+    );
   };
 
   return (
     <div 
-      className="lobby-display w-screen h-screen overflow-hidden relative"
+      className="lobby-display w-screen h-screen overflow-hidden relative bg-slate-900"
       style={{ transform: `scale(${scale})`, transformOrigin: 'center' }}
       data-testid="lobby-display"
     >
-      {/* Slide Content */}
       <AnimatePresence mode="wait">
         {currentSlide && (
           <motion.div
@@ -670,60 +493,20 @@ export default function LobbyDisplay() {
             transition={{ duration: 2, ease: "easeInOut" }}
           >
             {currentSlide.type === SLIDE_TYPES.WEATHER ? (
-              <WeatherSlide 
-                weather={weather} 
-                forecast={forecast}
-                currentTime={currentTime}
-                isPortrait={isPortrait}
-              />
+              <WeatherSlide weather={weather} forecast={forecast} currentTime={currentTime} isPortrait={isPortrait} />
             ) : currentSlide.type === SLIDE_TYPES.ATTRACTIONS ? (
-              <LocalAttractionsSlide 
-                weather={weather} 
-                isPortrait={isPortrait} 
-                attractions={attractions}
-                maxItems={settings.attractions_per_slide || 6}
-              />
+              <LocalAttractionsSlide weather={weather} isPortrait={isPortrait} attractions={attractions} maxItems={settings.attractions_per_slide || 6} />
             ) : currentSlide.type === SLIDE_TYPES.EVENTS ? (
-              <EventsSlide 
-                weather={weather} 
-                currentTime={currentTime} 
-                isPortrait={isPortrait}
-                events={localEvents}
-                maxItems={settings.events_per_slide || 8}
-              />
+              <EventsSlide weather={weather} currentTime={currentTime} isPortrait={isPortrait} events={localEvents} maxItems={settings.events_per_slide || 8} />
             ) : (
-              /* Photo Slide */
-              <>
-                <WeatherBackground 
-                  condition={weather?.condition} 
-                  icon={weather?.icon} 
-                />
-                <div className="absolute inset-0">
-                  <img
-                    src={getImageUrl(currentSlide.data)}
-                    alt="Hotel"
-                    className="w-full h-full object-cover"
-                  />
-                  <div 
-                    className="absolute inset-0"
-                    style={{
-                      background: layout === "split" 
-                        ? "linear-gradient(to right, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.1) 60%, rgba(0,0,0,0.4) 100%)"
-                        : isPortrait
-                          ? "linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.1) 25%, rgba(0,0,0,0.1) 55%, rgba(0,0,0,0.55) 100%)"
-                          : "linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.1) 30%, rgba(0,0,0,0.1) 70%, rgba(0,0,0,0.5) 100%)"
-                    }}
-                  />
-                </div>
-                {renderPhotoLayout()}
-              </>
+              renderPhotoSlide()
             )}
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* Slide Indicators */}
-      <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-20 flex gap-2">
+      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-20 flex gap-2">
         {slides.map((slide, index) => (
           <motion.div
             key={slide.id}

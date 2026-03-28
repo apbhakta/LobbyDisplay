@@ -274,38 +274,7 @@ class LocalEventUpdate(BaseModel):
 
 # ===== Default/Fallback Data =====
 
-DEFAULT_IMAGES = [
-    {
-        "id": "default_1",
-        "filename": "luxury_lobby.jpg",
-        "url": "https://images.pexels.com/photos/29649745/pexels-photo-29649745.jpeg",
-        "uploaded_at": datetime.now(timezone.utc).isoformat()
-    },
-    {
-        "id": "default_2",
-        "filename": "elegant_lobby.jpg",
-        "url": "https://images.unsplash.com/photo-1677129667171-92abd8740fa3",
-        "uploaded_at": datetime.now(timezone.utc).isoformat()
-    },
-    {
-        "id": "default_3",
-        "filename": "luxury_bed.jpg",
-        "url": "https://images.unsplash.com/photo-1731336478850-6bce7235e320",
-        "uploaded_at": datetime.now(timezone.utc).isoformat()
-    },
-    {
-        "id": "default_4",
-        "filename": "hotel_room.jpg",
-        "url": "https://images.pexels.com/photos/6466490/pexels-photo-6466490.jpeg",
-        "uploaded_at": datetime.now(timezone.utc).isoformat()
-    },
-    {
-        "id": "default_5",
-        "filename": "living_room.jpg",
-        "url": "https://images.unsplash.com/photo-1720540244592-b4124532b318",
-        "uploaded_at": datetime.now(timezone.utc).isoformat()
-    }
-]
+DEFAULT_IMAGES = []  # No stock/demo images — user uploads their own
 
 FALLBACK_WEATHER = {
     "temp": 72,
@@ -654,12 +623,12 @@ async def get_news(category: Optional[str] = None):
 # ===== Attractions Endpoints =====
 
 DEFAULT_ATTRACTIONS = [
-    {"name": "Bosque County Courthouse", "description": "Historic 1886 limestone courthouse in downtown", "distance": "0.3 miles", "category": "museums", "image_url": "https://images.unsplash.com/photo-1555883006-87e8e3c5f4cf?w=400", "enabled": True, "order": 0},
-    {"name": "Clifton Lutheran Church", "description": "Historic Rock Church celebrating Norwegian heritage since 1886", "distance": "0.5 miles", "category": "museums", "image_url": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400", "enabled": True, "order": 1},
-    {"name": "Bosque Museum", "description": "Preserving the history and culture of Bosque County", "distance": "0.4 miles", "category": "museums", "image_url": "https://images.unsplash.com/photo-1566127444979-b3d2b654e3d7?w=400", "enabled": True, "order": 2},
-    {"name": "Meridian State Park", "description": "Scenic park with lake, hiking trails, and wildlife", "distance": "12 miles", "category": "parks", "image_url": "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400", "enabled": True, "order": 3},
-    {"name": "Norse Historic District", "description": "Authentic Norwegian heritage and architecture", "distance": "8 miles", "category": "outdoor", "image_url": "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400", "enabled": True, "order": 4},
-    {"name": "Main Street Clifton", "description": "Charming downtown with antique shops and local eateries", "distance": "0.2 miles", "category": "shopping", "image_url": "https://images.unsplash.com/photo-1519999482648-25049ddd37b1?w=400", "enabled": True, "order": 5},
+    {"name": "Bosque County Courthouse", "description": "Historic 1886 limestone courthouse in downtown", "distance": "0.3 miles", "category": "museums", "image_url": "", "enabled": True, "order": 0},
+    {"name": "Clifton Lutheran Church", "description": "Historic Rock Church celebrating Norwegian heritage since 1886", "distance": "0.5 miles", "category": "museums", "image_url": "", "enabled": True, "order": 1},
+    {"name": "Bosque Museum", "description": "Preserving the history and culture of Bosque County", "distance": "0.4 miles", "category": "museums", "image_url": "", "enabled": True, "order": 2},
+    {"name": "Meridian State Park", "description": "Scenic park with lake, hiking trails, and wildlife", "distance": "12 miles", "category": "parks", "image_url": "", "enabled": True, "order": 3},
+    {"name": "Norse Historic District", "description": "Authentic Norwegian heritage and architecture", "distance": "8 miles", "category": "outdoor", "image_url": "", "enabled": True, "order": 4},
+    {"name": "Main Street Clifton", "description": "Charming downtown with antique shops and local eateries", "distance": "0.2 miles", "category": "shopping", "image_url": "", "enabled": True, "order": 5},
 ]
 
 @api_router.get("/attractions", response_model=List[Attraction])
