@@ -4,6 +4,8 @@ import { Cloud, Sun, CloudRain, CloudSnow, CloudLightning, Wind, Thermometer } f
 import axios from "axios";
 import WeatherDashboardSlide from "../components/WeatherDashboardSlide";
 import WeatherForecastSlide from "../components/WeatherForecastSlide";
+import LocalAttractionsSlide from "../components/LocalAttractionsSlide";
+import EventsSlide from "../components/EventsSlide";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -37,7 +39,9 @@ const getWeatherIcon = (iconCode) => {
 const SLIDE_TYPES = {
   PHOTO: 'photo',
   WEATHER_DASHBOARD: 'weather_dashboard',
-  WEATHER_FORECAST: 'weather_forecast'
+  WEATHER_FORECAST: 'weather_forecast',
+  LOCAL_ATTRACTIONS: 'local_attractions',
+  EVENTS: 'events'
 };
 
 export default function LobbyDisplay() {
@@ -124,18 +128,32 @@ export default function LobbyDisplay() {
       newSlides.push({ type: SLIDE_TYPES.PHOTO, data: img, id: `photo-${index}` });
     });
     
-    // Insert weather dashboard after every 2 photos (or at position 2)
+    // Insert weather dashboard after 2 photos
     if (newSlides.length >= 2) {
       newSlides.splice(2, 0, { type: SLIDE_TYPES.WEATHER_DASHBOARD, id: 'weather-dashboard' });
     } else {
       newSlides.push({ type: SLIDE_TYPES.WEATHER_DASHBOARD, id: 'weather-dashboard' });
     }
     
-    // Insert weather forecast after every 2 more photos (or at position 5)
-    if (newSlides.length >= 5) {
-      newSlides.splice(5, 0, { type: SLIDE_TYPES.WEATHER_FORECAST, id: 'weather-forecast' });
+    // Insert local attractions after weather dashboard + 1 more photo
+    if (newSlides.length >= 4) {
+      newSlides.splice(4, 0, { type: SLIDE_TYPES.LOCAL_ATTRACTIONS, id: 'local-attractions' });
+    } else {
+      newSlides.push({ type: SLIDE_TYPES.LOCAL_ATTRACTIONS, id: 'local-attractions' });
+    }
+    
+    // Insert weather forecast after local attractions + 1 more photo
+    if (newSlides.length >= 6) {
+      newSlides.splice(6, 0, { type: SLIDE_TYPES.WEATHER_FORECAST, id: 'weather-forecast' });
     } else {
       newSlides.push({ type: SLIDE_TYPES.WEATHER_FORECAST, id: 'weather-forecast' });
+    }
+    
+    // Insert events slide after weather forecast + 1 more photo
+    if (newSlides.length >= 8) {
+      newSlides.splice(8, 0, { type: SLIDE_TYPES.EVENTS, id: 'events' });
+    } else {
+      newSlides.push({ type: SLIDE_TYPES.EVENTS, id: 'events' });
     }
     
     setSlides(newSlides);
@@ -225,6 +243,21 @@ export default function LobbyDisplay() {
           <WeatherForecastSlide 
             weather={weather} 
             forecast={forecast}
+            currentTime={currentTime}
+          />
+        );
+      
+      case SLIDE_TYPES.LOCAL_ATTRACTIONS:
+        return (
+          <LocalAttractionsSlide 
+            hotelName={settings.hotel_name}
+          />
+        );
+      
+      case SLIDE_TYPES.EVENTS:
+        return (
+          <EventsSlide 
+            hotelName={settings.hotel_name}
             currentTime={currentTime}
           />
         );
