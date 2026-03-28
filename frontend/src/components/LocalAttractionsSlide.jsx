@@ -78,8 +78,7 @@ export default function LocalAttractionsSlide({ hotelName }) {
             </p>
           </div>
           <div className="text-right">
-            <p className="text-white/60 text-sm uppercase tracking-widest font-sans">Presented by</p>
-            <p className="text-white text-xl font-serif">{hotelName || "Velkommen Inn"}</p>
+            <p className="text-white/60 text-sm uppercase tracking-widest font-sans">Local Attractions</p>
           </div>
         </div>
 

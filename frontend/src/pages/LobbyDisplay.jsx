@@ -270,7 +270,7 @@ export default function LobbyDisplay() {
       default:
         return (
           <>
-            {/* Background Image */}
+            {/* Background Image - Full display with minimal overlay */}
             <img
               src={getImageUrl(slide.data)}
               alt="Hotel"
@@ -278,80 +278,43 @@ export default function LobbyDisplay() {
               data-testid="background-image"
             />
             
-            {/* Gradient Overlay */}
-            <div className="gradient-overlay absolute inset-0" />
+            {/* Subtle gradient overlay - only at bottom for text readability */}
+            <div 
+              className="absolute inset-0"
+              style={{
+                background: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.2) 20%, transparent 40%)'
+              }}
+            />
 
-            {/* Content Layer */}
-            <div className="absolute inset-0 z-20 h-full w-full p-12 md:p-16 lg:p-24 flex flex-col justify-between">
-              {/* Top Row */}
-              <div className="flex justify-between items-start">
-                {/* Hotel Name - Top Left */}
-                <div className="flex flex-col items-start">
-                  <h1 
-                    className="font-serif text-4xl lg:text-5xl font-semibold tracking-widest uppercase text-white text-shadow-strong"
-                    data-testid="hotel-name-display"
-                  >
-                    {settings.hotel_name}
-                  </h1>
-                </div>
-
-                {/* Clock and Date - Top Right */}
-                <div className="flex flex-col items-end text-right">
-                  <div 
-                    className="font-serif text-[6rem] lg:text-[10rem] font-light tracking-tighter leading-none text-white text-shadow-strong"
-                    data-testid="clock-display"
-                  >
-                    <span>{time.hours}</span>
-                    <span className="clock-separator">:</span>
-                    <span>{time.minutes}</span>
-                    <span className="text-3xl lg:text-4xl ml-4 font-sans font-light text-white/80">{time.ampm}</span>
-                  </div>
-                  <p 
-                    className="text-xl lg:text-2xl font-light tracking-widest uppercase text-white/80 font-sans mt-2 text-shadow"
-                    data-testid="date-display"
-                  >
-                    {formatDate(currentTime)}
-                  </p>
-                </div>
-              </div>
-
+            {/* Minimal Content Layer - Bottom only */}
+            <div className="absolute inset-0 z-20 h-full w-full p-8 md:p-12 lg:p-16 flex flex-col justify-end">
               {/* Bottom Row */}
               <div className="flex justify-between items-end">
                 {/* Weather Widget - Bottom Left */}
                 {weather && (
                   <div 
-                    className="flex items-center gap-6"
+                    className="flex items-center gap-4 bg-black/30 backdrop-blur-sm rounded-xl px-6 py-4"
                     data-testid="weather-widget"
                   >
                     <WeatherIcon 
-                      className="w-16 h-16 lg:w-24 lg:h-24 text-white weather-icon" 
+                      className="w-12 h-12 lg:w-16 lg:h-16 text-white" 
                       strokeWidth={1.5}
                     />
                     <div className="flex flex-col">
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-5xl lg:text-7xl font-light font-sans text-white text-shadow-strong">
-                          {Math.round(weather.temp)}°
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-4xl lg:text-5xl font-light font-sans text-white">
+                          {Math.round(weather.temp)}°F
                         </span>
-                        <span className="text-2xl font-light text-white/70">F</span>
                       </div>
-                      <p className="text-lg lg:text-xl font-light uppercase tracking-widest text-white/70 font-sans">
+                      <p className="text-sm lg:text-base font-light text-white/80 font-sans">
                         {weather.condition}
                       </p>
-                      <div className="flex items-center gap-4 mt-1 text-sm lg:text-base text-white/60 font-sans">
-                        <span className="flex items-center gap-1">
-                          <Thermometer className="w-4 h-4" />
-                          H: {Math.round(weather.temp_max)}°
-                        </span>
-                        <span className="flex items-center gap-1">
-                          L: {Math.round(weather.temp_min)}°
-                        </span>
-                      </div>
                     </div>
                   </div>
                 )}
 
                 {/* News Headline - Bottom Right */}
-                <div className="max-w-2xl text-right flex flex-col items-end gap-2">
+                <div className="max-w-xl text-right">
                   <AnimatePresence mode="wait">
                     {currentHeadline && (
                       <motion.div
@@ -360,13 +323,14 @@ export default function LobbyDisplay() {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
                         transition={{ duration: 1 }}
+                        className="bg-black/30 backdrop-blur-sm rounded-xl px-6 py-4"
                         data-testid="news-headline"
                       >
-                        <p className="font-serif text-xl lg:text-2xl font-light leading-relaxed text-white/90 italic text-shadow">
-                          "{currentHeadline.title}"
+                        <p className="font-sans text-base lg:text-lg font-light leading-relaxed text-white/90">
+                          {currentHeadline.title}
                         </p>
-                        <p className="text-sm lg:text-base font-sans text-white/50 mt-2 uppercase tracking-wider">
-                          — {currentHeadline.source}
+                        <p className="text-xs lg:text-sm font-sans text-white/50 mt-1">
+                          {currentHeadline.source}
                         </p>
                       </motion.div>
                     )}

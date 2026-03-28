@@ -1,4 +1,4 @@
-import { Calendar, Star, Music, Bike, Gift, Sparkles, Flag, ShoppingBag } from "lucide-react";
+import { Calendar, Star, Music, Bike, Gift, Sparkles, Flag, ShoppingBag, MapPin } from "lucide-react";
 import { motion } from "framer-motion";
 
 const events = [
@@ -179,14 +179,9 @@ export default function EventsSlide({ hotelName, currentTime }) {
         </div>
 
         {/* Footer */}
-        <div className="mt-4 flex items-center justify-between text-white/50">
-          <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4" />
-            <span className="text-sm font-sans">Ask our concierge for event details and tickets</span>
-          </div>
-          <div className="text-right">
-            <p className="text-sm font-sans">{hotelName || "Velkommen Inn"}</p>
-          </div>
+        <div className="mt-6 flex items-center justify-center gap-2 text-white/50">
+          <MapPin className="w-4 h-4" />
+          <span className="text-sm font-sans">Clifton, TX 76634 • Ask our front desk for directions</span>
         </div>
       </div>
     </div>
