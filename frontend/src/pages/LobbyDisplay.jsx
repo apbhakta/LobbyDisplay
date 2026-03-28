@@ -50,6 +50,8 @@ export default function LobbyDisplay() {
     hotel_name: "Velkommen Inn",
     city: "Clifton, Texas",
     photo_interval: 8,
+    display_orientation: "landscape",
+    display_scale: 100,
   });
   const [images, setImages] = useState([]);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
@@ -217,6 +219,10 @@ export default function LobbyDisplay() {
   const currentHeadline = headlines[currentHeadlineIndex];
   const currentSlide = slides[currentSlideIndex];
 
+  // Calculate display styles based on orientation and scale
+  const isPortrait = settings.display_orientation === "portrait";
+  const scale = settings.display_scale / 100;
+
   // Get image URL
   const getImageUrl = (image) => {
     if (!image) return "";
@@ -377,37 +383,65 @@ export default function LobbyDisplay() {
 
   return (
     <div 
-      className="lobby-display relative w-screen h-screen overflow-hidden bg-black"
+      className={`lobby-display relative overflow-hidden bg-black ${
+        isPortrait ? "w-screen h-screen" : "w-screen h-screen"
+      }`}
+      style={{
+        transform: `scale(${scale})`,
+        transformOrigin: 'center center',
+      }}
       data-testid="lobby-display"
+      data-orientation={settings.display_orientation}
     >
-      {/* Slide Content with Crossfade */}
-      <AnimatePresence mode="wait">
-        {currentSlide && (
-          <motion.div
-            key={currentSlide.id}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 2, ease: "easeInOut" }}
-            className="absolute inset-0"
-          >
-            {renderSlide(currentSlide)}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Portrait mode wrapper - rotates content 90 degrees */}
+      <div 
+        className={`${
+          isPortrait 
+            ? "absolute inset-0 flex items-center justify-center"
+            : "w-full h-full"
+        }`}
+      >
+        <div 
+          className={`${
+            isPortrait 
+              ? "w-[100vh] h-[100vw] origin-center rotate-90"
+              : "w-full h-full"
+          }`}
+        >
+          {/* Slide Content with Crossfade */}
+          <AnimatePresence mode="wait">
+            {currentSlide && (
+              <motion.div
+                key={currentSlide.id}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 2, ease: "easeInOut" }}
+                className="absolute inset-0"
+              >
+                {renderSlide(currentSlide)}
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-      {/* Slide Indicator */}
-      <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-30 flex gap-2">
-        {slides.map((slide, index) => (
-          <div
-            key={slide.id}
-            className={`w-2 h-2 rounded-full transition-all duration-300 ${
-              index === currentSlideIndex 
-                ? 'bg-white w-6' 
-                : 'bg-white/40'
-            }`}
-          />
-        ))}
+          {/* Slide Indicator */}
+          <div className={`absolute z-30 flex gap-2 ${
+            isPortrait 
+              ? "bottom-6 left-1/2 transform -translate-x-1/2" 
+              : "bottom-6 left-1/2 transform -translate-x-1/2"
+          }`}>
+            {slides.map((slide, index) => (
+              <div
+                key={slide.id}
+                className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                  index === currentSlideIndex 
+                    ? 'bg-white w-6' 
+                    : 'bg-white/40'
+                }`}
+              />
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -1,0 +1,343 @@
+{
+  "timestamp": "20260328_170310",
+  "total_tests": 10,
+  "passed_tests": 10,
+  "success_rate": 100.0,
+  "test_results": [
+    {
+      "test_name": "Root API",
+      "endpoint": "",
+      "method": "GET",
+      "expected_status": 200,
+      "actual_status": 200,
+      "success": true,
+      "response_data": {
+        "message": "Hotel Lobby Display API",
+        "status": "running"
+      },
+      "error": null
+    },
+    {
+      "test_name": "Health Check",
+      "endpoint": "health",
+      "method": "GET",
+      "expected_status": 200,
+      "actual_status": 200,
+      "success": true,
+      "response_data": {
+        "status": "healthy",
+        "weather_api_configured": true,
+        "news_api_configured": true
+      },
+      "error": null
+    },
+    {
+      "test_name": "Get Settings",
+      "endpoint": "settings",
+      "method": "GET",
+      "expected_status": 200,
+      "actual_status": 200,
+      "success": true,
+      "response_data": {
+        "id": "hotel_settings",
+        "hotel_name": "Velkommen Inn",
+        "city": "Clifton, Texas",
+        "news_category": "general",
+        "photo_interval": 8,
+        "weather_refresh": 15,
+        "news_refresh": 30,
+        "display_orientation": "landscape",
+        "display_scale": 100
+      },
+      "error": null
+    },
+    {
+      "test_name": "Update Settings",
+      "endpoint": "settings",
+      "method": "PUT",
+      "expected_status": 200,
+      "actual_status": 200,
+      "success": true,
+      "response_data": {
+        "id": "hotel_settings",
+        "hotel_name": "Test Hotel Update",
+        "city": "Test City, TX",
+        "news_category": "general",
+        "photo_interval": 8,
+        "weather_refresh": 15,
+        "news_refresh": 30,
+        "display_orientation": "portrait",
+        "display_scale": 125
+      },
+      "error": null
+    },
+    {
+      "test_name": "Restore Settings",
+      "endpoint": "settings",
+      "method": "PUT",
+      "expected_status": 200,
+      "actual_status": 200,
+      "success": true,
+      "response_data": {
+        "id": "hotel_settings",
+        "hotel_name": "Velkommen Inn",
+        "city": "Clifton, Texas",
+        "news_category": "general",
+        "photo_interval": 8,
+        "weather_refresh": 15,
+        "news_refresh": 30,
+        "display_orientation": "landscape",
+        "display_scale": 100
+      },
+      "error": null
+    },
+    {
+      "test_name": "Get Images",
+      "endpoint": "images",
+      "method": "GET",
+      "expected_status": 200,
+      "actual_status": 200,
+      "success": true,
+      "response_data": [
+        {
+          "id": "default_1",
+          "filename": "luxury_lobby.jpg",
+          "url": "https://images.pexels.com/photos/29649745/pexels-photo-29649745.jpeg",
+          "uploaded_at": "2026-03-28T17:00:07.064730+00:00"
+        },
+        {
+          "id": "default_2",
+          "filename": "elegant_lobby.jpg",
+          "url": "https://images.unsplash.com/photo-1677129667171-92abd8740fa3",
+          "uploaded_at": "2026-03-28T17:00:07.064743+00:00"
+        },
+        {
+          "id": "default_3",
+          "filename": "luxury_bed.jpg",
+          "url": "https://images.unsplash.com/photo-1731336478850-6bce7235e320",
+          "uploaded_at": "2026-03-28T17:00:07.064745+00:00"
+        },
+        {
+          "id": "default_4",
+          "filename": "hotel_room.jpg",
+          "url": "https://images.pexels.com/photos/6466490/pexels-photo-6466490.jpeg",
+          "uploaded_at": "2026-03-28T17:00:07.064746+00:00"
+        },
+        {
+          "id": "default_5",
+          "filename": "living_room.jpg",
+          "url": "https://images.unsplash.com/photo-1720540244592-b4124532b318",
+          "uploaded_at": "2026-03-28T17:00:07.064748+00:00"
+        }
+      ],
+      "error": null
+    },
+    {
+      "test_name": "Reset Images to Defaults",
+      "endpoint": "images/reset-defaults",
+      "method": "POST",
+      "expected_status": 200,
+      "actual_status": 200,
+      "success": true,
+      "response_data": {
+        "message": "Images reset to defaults"
+      },
+      "error": null
+    },
+    {
+      "test_name": "Get Weather",
+      "endpoint": "weather",
+      "method": "GET",
+      "expected_status": 200,
+      "actual_status": 200,
+      "success": true,
+      "response_data": {
+        "temp": 39.0,
+        "temp_min": 37.0,
+        "temp_max": 42.0,
+        "condition": "Broken Clouds",
+        "icon": "04d",
+        "city": "Clifton",
+        "humidity": 32,
+        "wind_speed": 8.0,
+        "visibility": 10.0,
+        "sunrise": "10:46 AM",
+        "sunset": "11:16 PM",
+        "uv_index": 5,
+        "air_quality": 42,
+        "is_fallback": false
+      },
+      "error": null
+    },
+    {
+      "test_name": "Get Extended Weather",
+      "endpoint": "weather/extended",
+      "method": "GET",
+      "expected_status": 200,
+      "actual_status": 200,
+      "success": true,
+      "response_data": {
+        "current": {
+          "temp": 39.0,
+          "temp_min": 37.0,
+          "temp_max": 42.0,
+          "condition": "Broken Clouds",
+          "icon": "04d",
+          "city": "Clifton",
+          "humidity": 32,
+          "wind_speed": 8.0,
+          "visibility": 10.0,
+          "sunrise": "10:46 AM",
+          "sunset": "11:16 PM",
+          "uv_index": 5,
+          "air_quality": 42,
+          "is_fallback": false
+        },
+        "forecast": [
+          {
+            "day": "Saturday",
+            "temp_min": 39.0,
+            "temp_max": 41.0,
+            "condition": "Broken Clouds",
+            "icon": "04d"
+          },
+          {
+            "day": "Sunday",
+            "temp_min": 35.0,
+            "temp_max": 55.0,
+            "condition": "Broken Clouds",
+            "icon": "04n"
+          },
+          {
+            "day": "Monday",
+            "temp_min": 42.0,
+            "temp_max": 53.0,
+            "condition": "Overcast Clouds",
+            "icon": "04n"
+          },
+          {
+            "day": "Tuesday",
+            "temp_min": 51.0,
+            "temp_max": 77.0,
+            "condition": "Light Rain",
+            "icon": "10n"
+          },
+          {
+            "day": "Wednesday",
+            "temp_min": 64.0,
+            "temp_max": 77.0,
+            "condition": "Broken Clouds",
+            "icon": "04n"
+          },
+          {
+            "day": "Thursday",
+            "temp_min": 46.0,
+            "temp_max": 58.0,
+            "condition": "Moderate Rain",
+            "icon": "10n"
+          }
+        ],
+        "hourly": [
+          {
+            "time": "06 PM",
+            "temp": 39
+          },
+          {
+            "time": "09 PM",
+            "temp": 41
+          },
+          {
+            "time": "12 AM",
+            "temp": 40
+          },
+          {
+            "time": "03 AM",
+            "temp": 37
+          },
+          {
+            "time": "06 AM",
+            "temp": 37
+          },
+          {
+            "time": "09 AM",
+            "temp": 35
+          },
+          {
+            "time": "12 PM",
+            "temp": 36
+          },
+          {
+            "time": "03 PM",
+            "temp": 45
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "test_name": "Get News Headlines",
+      "endpoint": "news",
+      "method": "GET",
+      "expected_status": 200,
+      "actual_status": 200,
+      "success": true,
+      "response_data": [
+        {
+          "title": "Dow tumbles 500 points, enters correction territory as Trump's Iran extension fails to soothe markets: Live updates - CNBC",
+          "source": "CNBC",
+          "url": "https://www.cnbc.com/2026/03/26/stock-market-today-live-updates.html",
+          "is_fallback": false
+        },
+        {
+          "title": "House panel finds Rep. Sheila Cherfilus-McCormick guilty of 25 ethics charges - NBC News",
+          "source": "NBC News",
+          "url": "https://www.nbcnews.com/politics/politics-news/ethics-committee-finds-rep-sheila-cherfilus-mccormick-guilty-violating-rcna265459",
+          "is_fallback": false
+        },
+        {
+          "title": "Iran's response to U.S. peace proposal expected Friday, sources say - CBS News",
+          "source": "CBS News",
+          "url": "https://www.cbsnews.com/news/iran-response-us-peace-proposal-war/",
+          "is_fallback": false
+        },
+        {
+          "title": "Apple has finally discontinued the Mac Pro desktop after years of fitful effort - Ars Technica",
+          "source": "Ars Technica",
+          "url": "https://arstechnica.com/gadgets/2026/03/apple-has-finally-discontinued-the-mac-pro-desktop-after-years-of-fitful-effort/",
+          "is_fallback": false
+        },
+        {
+          "title": "Funding TSA won\u2019t fix long airport lines overnight - CNN",
+          "source": "CNN",
+          "url": "https://www.cnn.com/2026/03/27/us/tsa-lines-not-fixed-overnight",
+          "is_fallback": false
+        },
+        {
+          "title": "Even wealthy Americans are souring on the economy as gas prices spike and stocks fall - CNN",
+          "source": "CNN",
+          "url": "https://www.cnn.com/2026/03/27/economy/us-consumer-sentiment-march-iran-war",
+          "is_fallback": false
+        },
+        {
+          "title": "Does Anyone Remember Laura Nyro? - Rolling Stone",
+          "source": "Rolling Stone",
+          "url": "http://www.rollingstone.com/music/music-features/laura-nyro-life-legend-legacy-1234855330/",
+          "is_fallback": false
+        },
+        {
+          "title": "Trump's paused attack on Iran's energy - for diplomacy or escalation? - BBC",
+          "source": "BBC News",
+          "url": "https://www.bbc.com/news/articles/c2evg2m3ye2o",
+          "is_fallback": false
+        },
+        {
+          "title": "Android 17 Beta 3 finally restores the single tap Wi-Fi toggle - 9to5Google",
+          "source": "9to5google.com",
+          "url": "http://9to5google.com/2026/03/27/android-17-beta-3-finally-restores-the-single-tap-wi-fi-toggle/",
+          "is_fallback": false
+        }
+      ],
+      "error": null
+    }
+  ]
+}

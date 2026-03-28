@@ -100,22 +100,30 @@ class HotelLobbyAPITester:
             print(f"   Hotel name: {settings.get('hotel_name', 'N/A')}")
             print(f"   City: {settings.get('city', 'N/A')}")
             print(f"   News category: {settings.get('news_category', 'N/A')}")
+            print(f"   Display orientation: {settings.get('display_orientation', 'N/A')}")
+            print(f"   Display scale: {settings.get('display_scale', 'N/A')}%")
 
-        # Update settings
+        # Update settings including display settings
         update_data = {
             "hotel_name": "Test Hotel Update",
-            "city": "Test City, TX"
+            "city": "Test City, TX",
+            "display_orientation": "portrait",
+            "display_scale": 125
         }
         success, updated = self.run_test("Update Settings", "PUT", "settings", 200, update_data)
         if success:
             print(f"   Updated hotel name: {updated.get('hotel_name', 'N/A')}")
             print(f"   Updated city: {updated.get('city', 'N/A')}")
+            print(f"   Updated display orientation: {updated.get('display_orientation', 'N/A')}")
+            print(f"   Updated display scale: {updated.get('display_scale', 'N/A')}%")
 
         # Restore original settings
         if settings:
             restore_data = {
                 "hotel_name": settings.get('hotel_name', 'Velkommen Inn'),
-                "city": settings.get('city', 'Clifton, Texas')
+                "city": settings.get('city', 'Clifton, Texas'),
+                "display_orientation": settings.get('display_orientation', 'landscape'),
+                "display_scale": settings.get('display_scale', 100)
             }
             self.run_test("Restore Settings", "PUT", "settings", 200, restore_data)
 

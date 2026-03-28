@@ -13,7 +13,10 @@ import {
   Newspaper,
   MapPin,
   Building2,
-  ArrowLeft
+  ArrowLeft,
+  Monitor,
+  Smartphone,
+  Maximize2
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -27,6 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../components/ui/select";
+import { Slider } from "../components/ui/slider";
 import { Toaster, toast } from "sonner";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -51,6 +55,8 @@ export default function AdminPanel() {
     photo_interval: 8,
     weather_refresh: 15,
     news_refresh: 30,
+    display_orientation: "landscape",
+    display_scale: 100,
   });
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -318,6 +324,103 @@ export default function AdminPanel() {
                       onChange={(e) => setSettings({ ...settings, news_refresh: parseInt(e.target.value) || 30 })}
                       data-testid="news-refresh-input"
                     />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-card border-white/10">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Monitor className="w-5 h-5" />
+                  Display Settings
+                </CardTitle>
+                <CardDescription>
+                  Configure screen orientation and size for your TV display
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Orientation Selection */}
+                <div className="space-y-3">
+                  <Label>Screen Orientation</Label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <button
+                      onClick={() => setSettings({ ...settings, display_orientation: "landscape" })}
+                      className={`flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all ${
+                        settings.display_orientation === "landscape"
+                          ? "border-primary bg-primary/10"
+                          : "border-white/10 hover:border-white/20"
+                      }`}
+                      data-testid="orientation-landscape"
+                    >
+                      <div className="w-24 h-14 rounded-lg border-2 border-current flex items-center justify-center">
+                        <Monitor className="w-8 h-5" />
+                      </div>
+                      <span className="text-sm font-medium">Landscape</span>
+                      <span className="text-xs text-muted-foreground">16:9 Horizontal</span>
+                    </button>
+                    <button
+                      onClick={() => setSettings({ ...settings, display_orientation: "portrait" })}
+                      className={`flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all ${
+                        settings.display_orientation === "portrait"
+                          ? "border-primary bg-primary/10"
+                          : "border-white/10 hover:border-white/20"
+                      }`}
+                      data-testid="orientation-portrait"
+                    >
+                      <div className="w-14 h-24 rounded-lg border-2 border-current flex items-center justify-center">
+                        <Smartphone className="w-5 h-8" />
+                      </div>
+                      <span className="text-sm font-medium">Portrait</span>
+                      <span className="text-xs text-muted-foreground">9:16 Vertical</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Scale/Size Slider */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label className="flex items-center gap-2">
+                      <Maximize2 className="w-4 h-4" />
+                      Display Scale
+                    </Label>
+                    <span className="text-sm font-mono bg-secondary px-2 py-1 rounded">
+                      {settings.display_scale}%
+                    </span>
+                  </div>
+                  <Slider
+                    value={[settings.display_scale]}
+                    onValueChange={(value) => setSettings({ ...settings, display_scale: value[0] })}
+                    min={50}
+                    max={150}
+                    step={5}
+                    className="w-full"
+                    data-testid="display-scale-slider"
+                  />
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>50% (Smaller)</span>
+                    <span>100% (Default)</span>
+                    <span>150% (Larger)</span>
+                  </div>
+                </div>
+
+                {/* Preview Box */}
+                <div className="p-4 bg-secondary/50 rounded-xl">
+                  <p className="text-sm text-muted-foreground mb-3">Preview</p>
+                  <div className="flex justify-center">
+                    <div 
+                      className={`bg-gradient-to-br from-slate-700 to-slate-900 rounded-lg flex items-center justify-center text-white/50 text-xs transition-all ${
+                        settings.display_orientation === "landscape" 
+                          ? "w-32 h-20" 
+                          : "w-20 h-32"
+                      }`}
+                      style={{ 
+                        transform: `scale(${settings.display_scale / 100})`,
+                        transformOrigin: 'center'
+                      }}
+                    >
+                      {settings.display_orientation === "landscape" ? "16:9" : "9:16"}
+                    </div>
                   </div>
                 </div>
               </CardContent>
