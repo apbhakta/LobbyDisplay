@@ -80,7 +80,7 @@ Build a premium fullscreen hotel lobby display web app in Clifton, Texas for a 1
 - GET /api/health
 
 ## P1 Upcoming Tasks
-- Scrolling ticker bar at the bottom for content announcements/promotions
+- Scrolling ticker bar at bottom for content announcements/promotions (content_items integration)
 
 ### Phase 7: Portrait 4:3 Default Display (Completed Feb 2026)
 - [x] Default display: Portrait orientation, 4:3 aspect ratio, 7.5x10 inches
@@ -89,8 +89,19 @@ Build a premium fullscreen hotel lobby display web app in Clifton, Texas for a 1
 - [x] Weather slide rewrite for portrait: location/clock header, temp+icon row, 2x2 stats grid, auto-fit forecast (no cutoff)
 - [x] Portrait photo overlay: hotel name top-left, clock top-right, weather+news bottom
 
+### Phase 8: Widget Positioning, Refactoring & Overlays (Completed Feb 2026)
+- [x] **Photo widget fix**: Weather bottom-left, news bottom-right (compact, side-by-side at corners — NOT blocking photo)
+- [x] **Drag-and-drop widget positioning**: Admin Display tab has Widget Positioning panel with 4 widgets (Hotel Name, Clock, Weather, News) and 6 position spots. Click widget → click position to move. Saved to `widget_positions` in settings.
+- [x] **LobbyDisplay.jsx refactored** into sub-components:
+  - `components/lobby/PhotoSlide.jsx` — fullscreen photo with positioned overlay widgets
+  - `components/lobby/SlideIndicators.jsx` — slide indicator dots
+  - `components/lobby/OverlayDisplay.jsx` — banner/ticker/corner/fullscreen overlays
+  - `components/lobby/GlassPanel.jsx` — shared glassmorphism panel
+  - `components/lobby/ClockWidgets.jsx` — LiveClock and DateDisplay
+  - `components/lobby/InfoWidgets.jsx` — WeatherWidget and NewsHeadline
+- [x] **Event/announcement overlay system**: Full CRUD (GET/POST/PUT/DELETE /api/overlays), 4 styles (banner, ticker, corner, fullscreen), color customization, enable/disable toggle, priority, time-based scheduling. Admin Overlays tab with creation form.
+
 ## P2 Backlog
 - Content sections integration into lobby display (announcements, promotions on slides)
-- Full drag-and-drop widget positioning
-- Event/announcement overlay for special occasions
-- Refactor LobbyDisplay.jsx into smaller layout sub-components
+- Full free-form drag widget positioning (pixel-level, not grid-based)
+- Refactor AdminPanel.jsx into smaller sub-components (file is 2300+ lines)
