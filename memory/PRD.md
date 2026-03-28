@@ -25,30 +25,55 @@ Photos -> Attractions -> Photos -> Weather -> Photos -> Events (looping)
 - Weather slide: 15s (configurable)
 - Special slides (attractions/events): 12s
 
-## What's Been Implemented (All Complete)
+## What's Been Implemented
+
+### Phase 1: Display Settings & Orientation (COMPLETE - Mar 28 2026)
+- [x] Preset aspect ratios: 16:9, 9:16, 4:3, 3:4, Custom
+- [x] Custom width/height input (inches)
+- [x] Landscape/Portrait orientation toggle with auto-dimension flip
+- [x] Live miniature preview in admin showing widget placement + weather theme
+- [x] Format info label (Aspect Ratio, Orientation, Width, Height)
+- [x] All slides responsive in both portrait and landscape
+- [x] Display scale slider (50-150%)
+- [x] Settings persist in backend (aspect_ratio field added to Settings model)
+
+### Core Features (COMPLETE - earlier sessions)
 - [x] Full lobby display with slide rotation (LobbyDisplay.jsx)
-- [x] Weather-reactive animated backgrounds (WeatherBackground.jsx) - 8 themes: sunny, night, cloudy, rain, storm, snow, fog, windy
+- [x] Weather-reactive animated backgrounds (WeatherBackground.jsx) - 8 themes
 - [x] Glassmorphism weather widget, news headline overlay
 - [x] Live clock and date
 - [x] Fullscreen weather slide with 6-day forecast (WeatherSlide.jsx)
-- [x] Local Attractions slide with dynamic weather background (LocalAttractionsSlide.jsx)
-- [x] Events slide with dynamic weather background (EventsSlide.jsx)
-- [x] Admin panel with image upload, drag-and-drop reorder, settings, display orientation
-- [x] Display scaling: landscape, portrait, 4:3 standard
+- [x] Local Attractions slide with dynamic weather background
+- [x] Events slide with dynamic weather background
+- [x] Admin panel: Images tab (upload/drag-reorder/delete), Settings tab, Display tab
 - [x] Backend APIs: /api/weather, /api/weather/extended, /api/news, /api/settings, /api/images
-- [x] Weather & news caching (15min / 30min)
-- [x] Fallback data for API failures
-- [x] Slide interval timing fix (setTimeout-based, variable per slide type)
-- [x] Dynamic weather backgrounds on ALL non-photo slides (weather, attractions, events)
+
+## Upcoming Tasks (Phase 2)
+- [ ] Backend CRUD for local attractions (add, edit, delete, reorder, enable/disable)
+  - Fields: name, description, distance, category
+  - Categories: dining, shopping, parks, museums, entertainment, family, events, outdoor, hotel recommendations
+  - Config: count visible, auto-rotate toggle
+- [ ] Backend CRUD for: announcements, promotions, welcome messages, amenities, events, emergency info, checkout reminders
+- [ ] Admin management UI for all content sections
+
+## Future Tasks (Phase 3)
+- [ ] Preset widget layouts (bottom-left, top-right, bottom bar, centered, split)
+- [ ] Widget sizing controls (clock, weather, news, forecast, logo, welcome, attractions)
+- [ ] Padding, spacing, font size adjustments
+- [ ] Structure for future drag-and-drop positioning
 
 ## P2 Backlog
 - Event/announcement overlay for special occasions or promotions
 
 ## Key Files
-- /app/frontend/src/pages/LobbyDisplay.jsx - Main display
-- /app/frontend/src/pages/AdminPanel.jsx - Admin config
-- /app/frontend/src/components/WeatherBackground.jsx - Dynamic weather animations
-- /app/frontend/src/components/WeatherSlide.jsx - Fullscreen weather
-- /app/frontend/src/components/LocalAttractionsSlide.jsx - Attractions
-- /app/frontend/src/components/EventsSlide.jsx - Events
-- /app/backend/server.py - FastAPI backend
+- /app/frontend/src/pages/LobbyDisplay.jsx
+- /app/frontend/src/pages/AdminPanel.jsx
+- /app/frontend/src/components/WeatherBackground.jsx
+- /app/frontend/src/components/WeatherSlide.jsx
+- /app/frontend/src/components/LocalAttractionsSlide.jsx
+- /app/frontend/src/components/EventsSlide.jsx
+- /app/backend/server.py
+
+## DB Schema
+- `settings`: { id, hotel_name, city, news_category, photo_interval, weather_slide_duration, weather_refresh, news_refresh, aspect_ratio, display_orientation, display_scale, display_width, display_height, enable_weather_animations }
+- `images`: { id, filename, url, uploaded_at }
