@@ -428,6 +428,125 @@ const LivePreview = ({ settings, weather }) => {
   );
 };
 
+// Widget Position Panel — allows drag-and-drop widget placement
+const WidgetPositionPanel = ({ settings, setSettings }) => {
+  const [activeWidget, setActiveWidget] = useState(null);
+
+  const positions = settings.widget_positions || {
+    hotel_name: { x: 0, y: 0 },
+    clock: { x: 100, y: 0 },
+    weather: { x: 0, y: 100 },
+    news: { x: 100, y: 100 },
+  };
+
+  const widgets = [
+    { key: "hotel_name", label: "Hotel Name", color: "bg-amber-500" },
+    { key: "clock", label: "Clock", color: "bg-blue-500" },
+    { key: "weather", label: "Weather", color: "bg-green-500" },
+    { key: "news", label: "News", color: "bg-purple-500" },
+  ];
+
+  const spots = [
+    { x: 0, y: 0, label: "Top-Left" },
+    { x: 50, y: 0, label: "Top-Center" },
+    { x: 100, y: 0, label: "Top-Right" },
+    { x: 0, y: 100, label: "Bottom-Left" },
+    { x: 50, y: 100, label: "Bottom-Center" },
+    { x: 100, y: 100, label: "Bottom-Right" },
+  ];
+
+  const handleSpotClick = (spot) => {
+    if (!activeWidget) return;
+    const newPositions = { ...positions, [activeWidget]: { x: spot.x, y: spot.y } };
+    setSettings(prev => ({ ...prev, widget_positions: newPositions }));
+    setActiveWidget(null);
+  };
+
+  const getWidgetAtSpot = (spot) => {
+    return widgets.find(w => positions[w.key]?.x === spot.x && positions[w.key]?.y === spot.y);
+  };
+
+  return (
+    <Card className="bg-card border-white/10">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Maximize2 className="w-5 h-5" />
+          Widget Positioning
+        </CardTitle>
+        <CardDescription>Click on a position to place each widget on the photo slides</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Widget selector buttons */}
+        <div className="flex gap-2 flex-wrap">
+          {widgets.map(w => (
+            <button
+              key={w.key}
+              onClick={() => setActiveWidget(activeWidget === w.key ? null : w.key)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                activeWidget === w.key
+                  ? "border-primary bg-primary/20 ring-2 ring-primary/30"
+                  : "border-white/10 hover:border-white/20"
+              }`}
+              data-testid={`widget-select-${w.key}`}
+            >
+              <span className={`inline-block w-2 h-2 rounded-full ${w.color} mr-2`} />
+              {w.label}
+            </button>
+          ))}
+        </div>
+        {activeWidget && (
+          <p className="text-xs text-primary">Click a position below to place <strong>{widgets.find(w => w.key === activeWidget)?.label}</strong></p>
+        )}
+
+        {/* Visual grid */}
+        <div
+          className="relative rounded-xl border border-white/20 overflow-hidden"
+          style={{
+            aspectRatio: settings.display_orientation === "portrait" ? '3/4' : '16/9',
+            maxHeight: 220,
+            background: 'linear-gradient(180deg, #334155 0%, #475569 50%, #1e293b 100%)',
+          }}
+        >
+          <div className="absolute inset-0 bg-black/20" />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <ImageIcon className="w-8 h-8 text-white/10" />
+          </div>
+          {spots.map((spot) => {
+            const widgetHere = getWidgetAtSpot(spot);
+            return (
+              <button
+                key={`${spot.x}-${spot.y}`}
+                onClick={() => handleSpotClick(spot)}
+                className={`absolute z-10 transition-all ${activeWidget ? "cursor-pointer hover:scale-110" : "cursor-default"}`}
+                style={{
+                  left: spot.x === 0 ? '8px' : spot.x === 50 ? '50%' : 'auto',
+                  right: spot.x === 100 ? '8px' : 'auto',
+                  top: spot.y === 0 ? '8px' : 'auto',
+                  bottom: spot.y === 100 ? '8px' : 'auto',
+                  transform: spot.x === 50 ? 'translateX(-50%)' : undefined,
+                }}
+                data-testid={`widget-spot-${spot.x}-${spot.y}`}
+              >
+                {widgetHere ? (
+                  <div className={`${widgetHere.color} text-white text-[10px] font-bold px-2.5 py-1 rounded-lg shadow-lg`}>
+                    {widgetHere.label}
+                  </div>
+                ) : (
+                  <div className={`w-6 h-6 rounded-lg border-2 border-dashed ${activeWidget ? "border-primary/60 bg-primary/10" : "border-white/20 bg-white/5"} flex items-center justify-center`}>
+                    {activeWidget && <Plus className="w-3 h-3 text-primary/60" />}
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-xs text-muted-foreground text-center">Select a widget, then click a position on the preview to move it</p>
+      </CardContent>
+    </Card>
+  );
+};
+
+
 export default function AdminPanel() {
   const navigate = useNavigate();
   const [settings, setSettings] = useState({
@@ -460,6 +579,9 @@ export default function AdminPanel() {
   const [editingEvent, setEditingEvent] = useState(null);
   const [newEvent, setNewEvent] = useState(null);
   const [eventSortBy, setEventSortBy] = useState("upcoming");
+  const [overlays, setOverlays] = useState([]);
+  const [editingOverlay, setEditingOverlay] = useState(null);
+  const [newOverlay, setNewOverlay] = useState(null);
 
   const fetchSettings = useCallback(async () => {
     try {
@@ -517,14 +639,24 @@ export default function AdminPanel() {
     }
   }, []);
 
+  const fetchOverlays = useCallback(async () => {
+    try {
+      const response = await axios.get(`${API}/overlays`);
+      setOverlays(response.data);
+    } catch (error) {
+      console.error("Error fetching overlays:", error);
+    }
+  }, []);
+
   useEffect(() => {
     fetchSettings();
     fetchImages();
     fetchWeather();
     fetchAttractions();
     fetchEvents();
+    fetchOverlays();
     CONTENT_SECTIONS.forEach(s => fetchContent(s.type));
-  }, [fetchSettings, fetchImages, fetchWeather, fetchAttractions, fetchEvents, fetchContent]);
+  }, [fetchSettings, fetchImages, fetchWeather, fetchAttractions, fetchEvents, fetchOverlays, fetchContent]);
 
   const handleSaveSettings = async () => {
     setLoading(true);
@@ -859,6 +991,10 @@ export default function AdminPanel() {
             <TabsTrigger value="display" className="gap-2" data-testid="tab-display">
               <Monitor className="w-4 h-4" />
               Display
+            </TabsTrigger>
+            <TabsTrigger value="overlays" className="gap-2" data-testid="tab-overlays">
+              <Megaphone className="w-4 h-4" />
+              Overlays
             </TabsTrigger>
           </TabsList>
 
@@ -2030,38 +2166,8 @@ export default function AdminPanel() {
                   </CardContent>
                 </Card>
 
-                {/* Layout Info */}
-                <Card className="bg-card border-white/10">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Maximize2 className="w-5 h-5" />
-                      Display Layout
-                    </CardTitle>
-                    <CardDescription>Fullscreen photos with floating glassmorphism widget overlays</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="p-4 rounded-xl bg-muted/30 border border-white/5">
-                      <div className="flex items-center gap-4">
-                        {/* Mini layout diagram */}
-                        <div className="w-24 h-14 rounded border border-white/20 relative overflow-hidden flex-shrink-0" style={{ background: 'linear-gradient(180deg, #475569 0%, #64748b 100%)' }}>
-                          <div className="absolute inset-0 bg-black/20" />
-                          {/* Top widgets */}
-                          <div className="absolute top-1 left-1 w-5 h-1 rounded-sm bg-white/30" />
-                          <div className="absolute top-1 right-1 w-4 h-1.5 rounded-sm bg-white/25" />
-                          {/* Bottom widgets */}
-                          <div className="absolute bottom-1 left-1 w-6 h-2 rounded-sm bg-white/15 backdrop-blur" />
-                          <div className="absolute bottom-1 right-1 w-5 h-1.5 rounded-sm bg-white/10" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">Fullscreen Overlay</p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Photos fill the entire screen. Clock, weather, and news float on top with glassmorphism effects.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                {/* Widget Positioning */}
+                <WidgetPositionPanel settings={settings} setSettings={setSettings} />
 
                 {/* Widget Sizing & Spacing */}
                 <Card className="bg-card border-white/10">
@@ -2198,6 +2304,157 @@ export default function AdminPanel() {
               </Button>
             </div>
           </TabsContent>
+
+          {/* Overlays Tab */}
+          <TabsContent value="overlays" className="space-y-6" data-testid="overlays-tab-content">
+            <Card className="bg-card border-white/10">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Megaphone className="w-5 h-5" />
+                      Overlays & Announcements
+                    </CardTitle>
+                    <CardDescription>Create banner, ticker, or fullscreen announcements that overlay on the lobby display</CardDescription>
+                  </div>
+                  <Button
+                    onClick={() => setNewOverlay({ title: "", message: "", style: "banner", bg_color: "#1e293b", text_color: "#ffffff", enabled: true, priority: 0, start_time: "", end_time: "" })}
+                    data-testid="add-overlay-btn"
+                  >
+                    <Plus className="w-4 h-4 mr-2" /> Add Overlay
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {/* New Overlay Form */}
+                {newOverlay && (
+                  <div className="mb-6 p-4 rounded-xl bg-muted/30 border border-white/10 space-y-4">
+                    <h4 className="font-medium text-sm">New Overlay</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Title</Label>
+                        <Input value={newOverlay.title} onChange={(e) => setNewOverlay(prev => ({ ...prev, title: e.target.value }))} placeholder="e.g. Happy Hour Special" data-testid="new-overlay-title" />
+                      </div>
+                      <div>
+                        <Label>Style</Label>
+                        <Select value={newOverlay.style} onValueChange={(v) => setNewOverlay(prev => ({ ...prev, style: v }))}>
+                          <SelectTrigger data-testid="new-overlay-style"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="banner">Banner (Top)</SelectItem>
+                            <SelectItem value="ticker">Ticker (Scrolling)</SelectItem>
+                            <SelectItem value="corner">Corner (Bottom-right)</SelectItem>
+                            <SelectItem value="fullscreen">Fullscreen</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div>
+                      <Label>Message</Label>
+                      <Input value={newOverlay.message} onChange={(e) => setNewOverlay(prev => ({ ...prev, message: e.target.value }))} placeholder="Optional detailed message" data-testid="new-overlay-message" />
+                    </div>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <Label>Background Color</Label>
+                        <div className="flex gap-2 items-center">
+                          <input type="color" value={newOverlay.bg_color} onChange={(e) => setNewOverlay(prev => ({ ...prev, bg_color: e.target.value }))} className="w-10 h-10 rounded border border-white/20 cursor-pointer" />
+                          <Input value={newOverlay.bg_color} onChange={(e) => setNewOverlay(prev => ({ ...prev, bg_color: e.target.value }))} className="font-mono text-sm" />
+                        </div>
+                      </div>
+                      <div>
+                        <Label>Text Color</Label>
+                        <div className="flex gap-2 items-center">
+                          <input type="color" value={newOverlay.text_color} onChange={(e) => setNewOverlay(prev => ({ ...prev, text_color: e.target.value }))} className="w-10 h-10 rounded border border-white/20 cursor-pointer" />
+                          <Input value={newOverlay.text_color} onChange={(e) => setNewOverlay(prev => ({ ...prev, text_color: e.target.value }))} className="font-mono text-sm" />
+                        </div>
+                      </div>
+                      <div>
+                        <Label>Priority</Label>
+                        <Input type="number" value={newOverlay.priority} onChange={(e) => setNewOverlay(prev => ({ ...prev, priority: parseInt(e.target.value) || 0 }))} />
+                      </div>
+                    </div>
+                    <div className="flex gap-2 justify-end">
+                      <Button variant="outline" onClick={() => setNewOverlay(null)}>Cancel</Button>
+                      <Button
+                        disabled={!newOverlay.title}
+                        onClick={async () => {
+                          try {
+                            await axios.post(`${API}/overlays`, newOverlay);
+                            setNewOverlay(null);
+                            fetchOverlays();
+                            toast.success("Overlay created");
+                          } catch { toast.error("Failed to create overlay"); }
+                        }}
+                        data-testid="save-new-overlay-btn"
+                      >
+                        <Check className="w-4 h-4 mr-2" /> Save Overlay
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Overlays List */}
+                {overlays.length === 0 && !newOverlay ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Megaphone className="w-12 h-12 mx-auto mb-4 opacity-30" />
+                    <p>No overlays yet. Create one to display announcements on the lobby screen.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {overlays.map((overlay) => (
+                      <div
+                        key={overlay.id}
+                        className="flex items-center gap-4 p-4 rounded-xl bg-muted/20 border border-white/10"
+                        data-testid={`overlay-item-${overlay.id}`}
+                      >
+                        {/* Color preview */}
+                        <div className="w-10 h-10 rounded-lg flex-shrink-0 flex items-center justify-center text-xs font-bold" style={{ backgroundColor: overlay.bg_color, color: overlay.text_color }}>
+                          {overlay.style === "banner" ? "B" : overlay.style === "ticker" ? "T" : overlay.style === "corner" ? "C" : "F"}
+                        </div>
+
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{overlay.title}</p>
+                          <p className="text-xs text-muted-foreground">{overlay.style} &middot; Priority {overlay.priority}</p>
+                        </div>
+
+                        {/* Toggle enabled */}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={async () => {
+                            try {
+                              await axios.put(`${API}/overlays/${overlay.id}`, { enabled: !overlay.enabled });
+                              fetchOverlays();
+                            } catch { toast.error("Failed to toggle overlay"); }
+                          }}
+                          data-testid={`toggle-overlay-${overlay.id}`}
+                        >
+                          {overlay.enabled ? <ToggleRight className="w-5 h-5 text-green-400" /> : <ToggleLeft className="w-5 h-5 text-muted-foreground" />}
+                        </Button>
+
+                        {/* Delete */}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={async () => {
+                            try {
+                              await axios.delete(`${API}/overlays/${overlay.id}`);
+                              fetchOverlays();
+                              toast.success("Overlay deleted");
+                            } catch { toast.error("Failed to delete overlay"); }
+                          }}
+                          data-testid={`delete-overlay-${overlay.id}`}
+                        >
+                          <Trash2 className="w-4 h-4 text-red-400" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
         </Tabs>
       </main>
     </div>

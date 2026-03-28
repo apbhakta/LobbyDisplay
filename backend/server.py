@@ -73,6 +73,13 @@ class Settings(BaseModel):
     events_show_in_slideshow: bool = True
     events_auto_hide_expired: bool = True
     events_sort_by: str = "upcoming"  # upcoming, newest, featured, custom
+    # Widget positions (percentage-based, 0-100)
+    widget_positions: dict = Field(default_factory=lambda: {
+        "hotel_name": {"x": 0, "y": 0},
+        "clock": {"x": 100, "y": 0},
+        "weather": {"x": 0, "y": 100},
+        "news": {"x": 100, "y": 100},
+    })
 
 class SettingsUpdate(BaseModel):
     hotel_name: Optional[str] = None
@@ -100,6 +107,7 @@ class SettingsUpdate(BaseModel):
     events_show_in_slideshow: Optional[bool] = None
     events_auto_hide_expired: Optional[bool] = None
     events_sort_by: Optional[str] = None
+    widget_positions: Optional[dict] = None
 
 class HotelImage(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -274,7 +282,47 @@ class LocalEventUpdate(BaseModel):
     keep_after_expired: Optional[bool] = None
     order: Optional[int] = None
 
-# ===== Default/Fallback Data =====
+# ===== Overlay/Announcement Model =====
+OVERLAY_STYLES = ["banner", "fullscreen", "corner", "ticker"]
+
+class Overlay(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    title: str
+    message: str = ""
+    style: str = "banner"  # banner, fullscreen, corner, ticker
+    bg_color: str = "#1e293b"
+    text_color: str = "#ffffff"
+    icon: str = ""
+    enabled: bool = True
+    priority: int = 0  # higher = shown first
+    start_time: str = ""  # ISO datetime, empty = immediate
+    end_time: str = ""  # ISO datetime, empty = indefinite
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+class OverlayCreate(BaseModel):
+    title: str
+    message: str = ""
+    style: str = "banner"
+    bg_color: str = "#1e293b"
+    text_color: str = "#ffffff"
+    icon: str = ""
+    enabled: bool = True
+    priority: int = 0
+    start_time: str = ""
+    end_time: str = ""
+
+class OverlayUpdate(BaseModel):
+    title: Optional[str] = None
+    message: Optional[str] = None
+    style: Optional[str] = None
+    bg_color: Optional[str] = None
+    text_color: Optional[str] = None
+    icon: Optional[str] = None
+    enabled: Optional[bool] = None
+    priority: Optional[int] = None
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
 
 DEFAULT_IMAGES = []  # No stock/demo images — user uploads their own
 
@@ -894,6 +942,54 @@ async def upload_event_image(event_id: str, file: UploadFile = File(...)):
     image_url = f"/api/uploads/{filename}"
     await db.local_events.update_one({"id": event_id}, {"$set": {"image_url": image_url}})
     return {"image_url": image_url}
+
+# ===== Overlay/Announcement Endpoints =====
+
+@api_router.get("/overlays")
+async def get_overlays():
+    overlays = await db.overlays.find({}, {"_id": 0}).sort("priority", -1).to_list(100)
+    return overlays
+
+@api_router.post("/overlays")
+async def create_overlay(overlay: OverlayCreate):
+    count = await db.overlays.count_documents({})
+    doc = Overlay(**overlay.model_dump(), order=count).model_dump()
+    await db.overlays.insert_one(doc)
+    return {k: v for k, v in doc.items() if k != "_id"}
+
+@api_router.put("/overlays/{overlay_id}")
+async def update_overlay(overlay_id: str, update: OverlayUpdate):
+    update_data = {k: v for k, v in update.model_dump().items() if v is not None}
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    await db.overlays.update_one({"id": overlay_id}, {"$set": update_data})
+    doc = await db.overlays.find_one({"id": overlay_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Overlay not found")
+    return doc
+
+@api_router.delete("/overlays/{overlay_id}")
+async def delete_overlay(overlay_id: str):
+    result = await db.overlays.delete_one({"id": overlay_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Overlay not found")
+    return {"status": "deleted"}
+
+@api_router.get("/overlays/active")
+async def get_active_overlays():
+    """Get currently active overlays (enabled and within time range)"""
+    now = datetime.now(timezone.utc).isoformat()
+    overlays = await db.overlays.find({"enabled": True}, {"_id": 0}).sort("priority", -1).to_list(100)
+    active = []
+    for o in overlays:
+        start = o.get("start_time", "")
+        end = o.get("end_time", "")
+        if start and start > now:
+            continue
+        if end and end < now:
+            continue
+        active.append(o)
+    return active
 
 # ===== Health Check =====
 
