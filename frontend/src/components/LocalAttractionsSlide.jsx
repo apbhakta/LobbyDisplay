@@ -1,5 +1,6 @@
 import { MapPin, Mountain, Church, Palette, Trees, Building2, Camera } from "lucide-react";
 import { motion } from "framer-motion";
+import WeatherBackground from "./WeatherBackground";
 
 const attractions = [
   {
@@ -40,30 +41,20 @@ const attractions = [
   }
 ];
 
-export default function LocalAttractionsSlide({ hotelName }) {
+export default function LocalAttractionsSlide({ weather }) {
   return (
     <div 
       className="w-full h-full relative overflow-hidden"
       data-testid="local-attractions-slide"
     >
-      {/* Background gradient */}
-      <div 
-        className="absolute inset-0"
-        style={{
-          background: "linear-gradient(135deg, #1e3a5f 0%, #2d5a7b 30%, #3d7a9c 60%, #4a9bb8 100%)"
-        }}
-      />
+      {/* Dynamic Weather-Reactive Background */}
+      <WeatherBackground condition={weather?.condition} icon={weather?.icon} />
       
-      {/* Decorative pattern overlay */}
-      <div 
-        className="absolute inset-0 opacity-10"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-        }}
-      />
+      {/* Dark overlay for text readability */}
+      <div className="absolute inset-0 bg-black/30 z-[1]" />
 
       {/* Content */}
-      <div className="relative z-10 h-full flex flex-col p-12 lg:p-16">
+      <div className="relative z-10 h-full flex flex-col p-12 lg:p-16" style={{ zIndex: 2 }}>
         {/* Header */}
         <div className="flex justify-between items-start mb-8">
           <div>

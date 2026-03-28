@@ -4,6 +4,8 @@ import { MapPin, ArrowUp, ArrowDown, Droplets, Wind, Newspaper } from "lucide-re
 import axios from "axios";
 import WeatherBackground, { getWeatherTheme } from "../components/WeatherBackground";
 import WeatherSlide from "../components/WeatherSlide";
+import LocalAttractionsSlide from "../components/LocalAttractionsSlide";
+import EventsSlide from "../components/EventsSlide";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -12,6 +14,8 @@ const API = `${BACKEND_URL}/api`;
 const SLIDE_TYPES = {
   PHOTO: 'photo',
   WEATHER: 'weather',
+  ATTRACTIONS: 'attractions',
+  EVENTS: 'events',
 };
 
 // Glass panel component with weather-reactive styling
@@ -305,6 +309,9 @@ export default function LobbyDisplay() {
   // Build slides array
   useEffect(() => {
     const newSlides = [];
+    const photoInterval = settings.photo_interval || 8;
+    const weatherDuration = settings.weather_slide_duration || 15;
+    const specialDuration = 12; // seconds for attractions/events slides
     
     // Add photo slides
     images.forEach((img, index) => {
@@ -312,23 +319,71 @@ export default function LobbyDisplay() {
         type: SLIDE_TYPES.PHOTO, 
         data: img, 
         id: `photo-${index}`,
-        duration: settings.photo_interval * 1000
+        duration: photoInterval * 1000
       });
     });
     
-    // Insert weather slide after every 3 photos
-    if (newSlides.length >= 3) {
-      newSlides.splice(3, 0, { 
+    // Insert special slides into the rotation
+    // Pattern: photos → attractions → photos → weather → photos → events
+    if (newSlides.length >= 6) {
+      // After 2nd photo: attractions
+      newSlides.splice(2, 0, { 
+        type: SLIDE_TYPES.ATTRACTIONS, 
+        id: 'attractions',
+        duration: specialDuration * 1000
+      });
+      // After 5th item (3 photos + attractions + 1 photo): weather
+      newSlides.splice(5, 0, { 
         type: SLIDE_TYPES.WEATHER, 
         id: 'weather',
-        duration: (settings.weather_slide_duration || 15) * 1000
+        duration: weatherDuration * 1000
       });
-    } else {
-      // If less than 3 photos, add weather slide at the end
+      // After 8th item: events
+      if (newSlides.length > 7) {
+        newSlides.splice(8, 0, { 
+          type: SLIDE_TYPES.EVENTS, 
+          id: 'events',
+          duration: specialDuration * 1000
+        });
+      } else {
+        newSlides.push({ 
+          type: SLIDE_TYPES.EVENTS, 
+          id: 'events',
+          duration: specialDuration * 1000
+        });
+      }
+    } else if (newSlides.length >= 3) {
+      newSlides.splice(2, 0, { 
+        type: SLIDE_TYPES.ATTRACTIONS, 
+        id: 'attractions',
+        duration: specialDuration * 1000
+      });
       newSlides.push({ 
         type: SLIDE_TYPES.WEATHER, 
         id: 'weather',
-        duration: (settings.weather_slide_duration || 15) * 1000
+        duration: weatherDuration * 1000
+      });
+      newSlides.push({ 
+        type: SLIDE_TYPES.EVENTS, 
+        id: 'events',
+        duration: specialDuration * 1000
+      });
+    } else {
+      // Few or no photos — add all special slides
+      newSlides.push({ 
+        type: SLIDE_TYPES.ATTRACTIONS, 
+        id: 'attractions',
+        duration: specialDuration * 1000
+      });
+      newSlides.push({ 
+        type: SLIDE_TYPES.WEATHER, 
+        id: 'weather',
+        duration: weatherDuration * 1000
+      });
+      newSlides.push({ 
+        type: SLIDE_TYPES.EVENTS, 
+        id: 'events',
+        duration: specialDuration * 1000
       });
     }
     
@@ -339,15 +394,15 @@ export default function LobbyDisplay() {
   useEffect(() => {
     if (slides.length === 0) return;
     
-    const currentSlide = slides[currentSlideIndex];
-    const duration = currentSlide?.duration || settings.photo_interval * 1000;
+    const currentSlideData = slides[currentSlideIndex];
+    const duration = currentSlideData?.duration || 8000;
     
     const timer = setTimeout(() => {
       setCurrentSlideIndex((prev) => (prev + 1) % slides.length);
     }, duration);
     
     return () => clearTimeout(timer);
-  }, [slides, currentSlideIndex, settings.photo_interval]);
+  }, [slides, currentSlideIndex]);
 
   // Rotate headlines
   useEffect(() => {
@@ -412,6 +467,12 @@ export default function LobbyDisplay() {
                 forecast={forecast}
                 currentTime={currentTime}
               />
+            ) : currentSlide.type === SLIDE_TYPES.ATTRACTIONS ? (
+              /* Local Attractions Slide */
+              <LocalAttractionsSlide weather={weather} />
+            ) : currentSlide.type === SLIDE_TYPES.EVENTS ? (
+              /* Events Slide */
+              <EventsSlide weather={weather} currentTime={currentTime} />
             ) : (
               /* Photo Slide */
               <>
@@ -513,7 +574,10 @@ export default function LobbyDisplay() {
             key={slide.id}
             className={`h-1.5 rounded-full transition-all duration-500 ${
               index === currentSlideIndex 
-                ? slide.type === SLIDE_TYPES.WEATHER ? 'bg-blue-400 w-10' : 'bg-white w-8' 
+                ? slide.type === SLIDE_TYPES.WEATHER ? 'bg-blue-400 w-10' 
+                  : slide.type === SLIDE_TYPES.ATTRACTIONS ? 'bg-amber-400 w-10'
+                  : slide.type === SLIDE_TYPES.EVENTS ? 'bg-orange-400 w-10'
+                  : 'bg-white w-8' 
                 : 'bg-white/40 w-1.5'
             }`}
             animate={index === currentSlideIndex ? { opacity: [0.8, 1, 0.8] } : {}}

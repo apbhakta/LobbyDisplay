@@ -1,5 +1,6 @@
 import { Calendar, Star, Music, Bike, Gift, Sparkles, Flag, ShoppingBag, MapPin } from "lucide-react";
 import { motion } from "framer-motion";
+import WeatherBackground from "./WeatherBackground";
 
 const events = [
   {
@@ -71,7 +72,7 @@ const events = [
 const featuredEvents = events.filter(e => e.featured);
 const otherEvents = events.filter(e => !e.featured);
 
-export default function EventsSlide({ hotelName, currentTime }) {
+export default function EventsSlide({ weather, currentTime }) {
   const currentMonth = currentTime?.toLocaleDateString("en-US", { month: "long" }) || "March";
   
   return (
@@ -79,20 +80,14 @@ export default function EventsSlide({ hotelName, currentTime }) {
       className="w-full h-full relative overflow-hidden"
       data-testid="events-slide"
     >
-      {/* Background with warm gradient */}
-      <div 
-        className="absolute inset-0"
-        style={{
-          background: "linear-gradient(135deg, #7c2d12 0%, #9a3412 25%, #c2410c 50%, #ea580c 75%, #f97316 100%)"
-        }}
-      />
+      {/* Dynamic Weather-Reactive Background */}
+      <WeatherBackground condition={weather?.condition} icon={weather?.icon} />
       
-      {/* Decorative circles */}
-      <div className="absolute top-20 right-20 w-64 h-64 rounded-full bg-white/5 blur-3xl" />
-      <div className="absolute bottom-20 left-20 w-96 h-96 rounded-full bg-yellow-500/10 blur-3xl" />
+      {/* Dark overlay for readability */}
+      <div className="absolute inset-0 bg-black/30 z-[1]" />
 
       {/* Content */}
-      <div className="relative z-10 h-full flex flex-col p-12 lg:p-16">
+      <div className="relative h-full flex flex-col p-12 lg:p-16" style={{ zIndex: 2 }}>
         {/* Header */}
         <div className="flex justify-between items-start mb-6">
           <div>
