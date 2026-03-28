@@ -36,15 +36,13 @@ Build a premium fullscreen hotel lobby display web app in Clifton, Texas for a 1
 - [x] Dynamic EventsSlide in lobby display
 
 ### Phase 5: UI Redesign (Completed Feb 2026)
-- [x] **Separated Panel Layout**: Photo area and info panel (clock, weather, news) strictly separated — NO overlap
-  - Landscape: Photo left (68%), info panel right (32%)
-  - Portrait: Photo top (65%), info panel bottom (35%)
+- [x] **Fullscreen Overlay Layout**: Photos fill entire screen, widgets float on top with glassmorphism
+  - Landscape: Hotel name top-left, clock top-right, weather bottom-left, news bottom-right
+  - Portrait: Centered clock/name top, weather+news stacked bottom
 - [x] **Removed all stock images**: No unsplash.com fallback URLs in code or DB
-- [x] **Removed "Velkommen Inn"** from all display slides, backend defaults, and fallback data
 - [x] **Premium empty states**: "Attractions coming soon" / "Events coming soon" when no DB data
-- [x] **Admin LivePreview** updated to reflect the new separated panel layout
-- [x] **Display Layout card** replaces old widget layout presets in admin
-- [x] **DB data migration**: Cleaned unsplash URLs from existing attractions, cleared hotel_name
+- [x] **Admin LivePreview** reflects fullscreen overlay layout
+- [x] **DB data migration**: Cleaned unsplash URLs from existing attractions
 
 ### Phase 6: WeatherAPI.com Migration (Completed Feb 2026)
 - [x] Replaced OpenWeatherMap with WeatherAPI.com as weather provider
