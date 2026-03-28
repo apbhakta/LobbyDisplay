@@ -1,0 +1,131 @@
+{
+  "theme": "dark",
+  "archetype": "5 (Jewel & Luxury)",
+  "colors": {
+    "background_overlay": "bg-gradient-to-t from-black/90 via-black/30 to-black/80",
+    "primary_text": "text-white",
+    "secondary_text": "text-white/70",
+    "accent": "text-amber-100",
+    "admin_background": "hsl(220 20% 8%)",
+    "admin_card": "hsl(220 20% 12%)",
+    "admin_border": "border-white/10"
+  },
+  "typography": {
+    "font_families": [
+      {
+        "name": "Playfair Display",
+        "usage": "Headlines, Hotel Name, Clock Time, Elegant accents",
+        "import_url": "https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap"
+      },
+      {
+        "name": "Outfit",
+        "usage": "Dates, Weather stats, News text, Admin Panel body",
+        "import_url": "https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap"
+      }
+    ],
+    "scales": {
+      "clock_time": "text-[8rem] lg:text-[10rem] font-light tracking-tighter leading-none font-serif",
+      "date": "text-2xl lg:text-3xl font-light tracking-widest uppercase text-white/80 font-sans",
+      "hotel_name": "text-4xl lg:text-5xl font-semibold tracking-widest uppercase font-serif",
+      "weather_temp": "text-5xl lg:text-7xl font-light font-sans",
+      "weather_cond": "text-xl font-light uppercase tracking-widest text-white/70 font-sans",
+      "news_headline": "text-2xl lg:text-3xl font-light leading-relaxed max-w-4xl font-serif italic text-white/90"
+    }
+  },
+  "layout_and_spacing": {
+    "display_screen": {
+      "container": "relative w-screen h-screen overflow-hidden bg-black",
+      "padding": "p-12 md:p-16 lg:p-24",
+      "structure": "Grid-based or Flex layout over absolute background. Push elements to the far corners. High negative space.",
+      "alignment": "Left: Hotel Name (Top) & Weather (Bottom). Right: Clock/Date (Top) & News (Bottom). Use optical alignment."
+    },
+    "admin_panel": {
+      "container": "max-w-4xl mx-auto p-8 lg:p-12",
+      "spacing": "gap-8 lg:gap-12",
+      "style": "Dark mode forced. Cardless or 1px border cards. Minimalist technical aesthetic."
+    }
+  },
+  "components": {
+    "background_slider": {
+      "description": "Absolute inset-0. Renders images. Uses Framer Motion for slow, elegant 2-second crossfade (opacity 0 to 1). Includes the gradient overlay overlaying it."
+    },
+    "clock_widget": {
+      "description": "Live digital clock top right. Massive size. No seconds shown, just HH:MM to maintain elegance. AM/PM subtle.",
+      "classes": "flex flex-col items-end text-right"
+    },
+    "weather_widget": {
+      "description": "Bottom left. Large, minimal line icons (Lucide). Temp on left, vertical stack of condition/high-low on right.",
+      "classes": "flex items-center gap-6"
+    },
+    "news_ticker": {
+      "description": "Bottom right. Displays exactly ONE headline at a time. Transitions via Framer Motion AnimatePresence (fade in and slide up slightly). Refreshes every 30 mins, rotates headline every 15s locally.",
+      "classes": "max-w-2xl text-right flex flex-col items-end gap-4"
+    },
+    "admin_form": {
+      "description": "Shadcn based. Dark theme. Clean input fields, subtle hover states. No heavy box-shadows.",
+      "shadcn_components": ["input", "button", "card", "label", "tabs"]
+    }
+  },
+  "motion": {
+    "image_transition": "duration: 2, ease: 'easeInOut' (Framer Motion).",
+    "news_transition": "initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: -10 }, transition: { duration: 1 }"
+  },
+  "media": {
+    "icons_library": "lucide-react",
+    "image_urls": [
+      {
+        "url": "https://images.pexels.com/photos/29649745/pexels-photo-29649745.jpeg",
+        "category": "background",
+        "description": "Luxurious hotel lobby with chandeliers"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1677129667171-92abd8740fa3",
+        "category": "background",
+        "description": "Elegant hotel lobby aesthetic"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1731336478850-6bce7235e320",
+        "category": "background",
+        "description": "Minimalist luxury white bed"
+      },
+      {
+        "url": "https://images.pexels.com/photos/6466490/pexels-photo-6466490.jpeg",
+        "category": "background",
+        "description": "Beautifully decorated hotel room interior"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1720540244592-b4124532b318",
+        "category": "background",
+        "description": "Checkered floor living room with large windows"
+      }
+    ]
+  },
+  "accessibility": {
+    "contrast": "Ensure the gradient overlay is dark enough (black/80 at text locations) to pass APCA contrast checks.",
+    "motion": "Respect prefers-reduced-motion for the crossfades.",
+    "data_testids": [
+      "hotel-name-display",
+      "clock-display",
+      "date-display",
+      "weather-widget",
+      "news-headline",
+      "admin-settings-form",
+      "admin-save-button",
+      "admin-city-input",
+      "admin-name-input"
+    ]
+  },
+  "instructions_to_main_agent": [
+    "Build a React app using Tailwind CSS, Framer Motion, and lucide-react.",
+    "Install fonts: import Playfair Display and Outfit in index.css.",
+    "Create two main views: A public display ('/') and an Admin Panel ('/admin').",
+    "The public display ('/') MUST be built using raw HTML/Tailwind/Framer Motion. Do NOT use Shadcn components for the display screen to maintain complete creative layout control. It must be `h-screen w-screen overflow-hidden`.",
+    "Ensure the rotating background images stretch to cover the screen (`object-cover`) and use a heavy dark gradient overlay so text is extremely legible from a distance.",
+    "The Clock and Date should use `setInterval` to update live.",
+    "Integrate OpenWeatherMap and NewsAPI.org. Create robust fallback mock data if the API keys are not provided or fail (e.g. mock weather to 72°F Sunny, mock news to a generic positive headline).",
+    "Rotate hotel photos every 8-10 seconds via Framer Motion crossfade.",
+    "The Admin panel ('/admin') MUST use Shadcn components. Force dark mode on it for a premium backend feel. Store preferences (City, Hotel Name) in `localStorage` or a mock backend state to reflect on the display view.",
+    "Apply `data-testid` to all major interactive and informational nodes.",
+    "Do not add horizontal scrolling. Use clean, extreme padding (p-16 or p-24) to keep content far from screen edges (TV safe zones)."
+  ]
+}
