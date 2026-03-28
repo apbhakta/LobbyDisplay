@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { 
@@ -16,7 +16,11 @@ import {
   ArrowLeft,
   Monitor,
   Smartphone,
-  Maximize2
+  Maximize2,
+  GripVertical,
+  X,
+  Plus,
+  CloudSun
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -30,6 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../components/ui/select";
+import { Switch } from "../components/ui/switch";
 import { Slider } from "../components/ui/slider";
 import { Toaster, toast } from "sonner";
 
@@ -46,6 +51,188 @@ const NEWS_CATEGORIES = [
   { value: "sports", label: "Sports" },
 ];
 
+// Drag and Drop Image Grid
+const ImageGrid = ({ images, onReorder, onDelete, getImageUrl }) => {
+  const [draggedIndex, setDraggedIndex] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
+
+  const handleDragStart = (e, index) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e, index) => {
+    e.preventDefault();
+    if (draggedIndex !== index) {
+      setDragOverIndex(index);
+    }
+  };
+
+  const handleDragLeave = () => {
+    setDragOverIndex(null);
+  };
+
+  const handleDrop = (e, index) => {
+    e.preventDefault();
+    if (draggedIndex !== null && draggedIndex !== index) {
+      const newImages = [...images];
+      const [draggedItem] = newImages.splice(draggedIndex, 1);
+      newImages.splice(index, 0, draggedItem);
+      onReorder(newImages);
+    }
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  if (images.length === 0) {
+    return (
+      <div className="text-center py-16 text-muted-foreground border-2 border-dashed border-white/10 rounded-xl">
+        <ImageIcon className="w-16 h-16 mx-auto mb-4 opacity-30" />
+        <p className="text-lg">No images uploaded yet</p>
+        <p className="text-sm mt-1">Drop images here or use the upload button</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      {images.map((image, index) => (
+        <div
+          key={image.id}
+          draggable
+          onDragStart={(e) => handleDragStart(e, index)}
+          onDragOver={(e) => handleDragOver(e, index)}
+          onDragLeave={handleDragLeave}
+          onDrop={(e) => handleDrop(e, index)}
+          onDragEnd={handleDragEnd}
+          className={`relative group rounded-xl overflow-hidden border-2 cursor-move transition-all ${
+            draggedIndex === index 
+              ? "opacity-50 scale-95" 
+              : dragOverIndex === index 
+              ? "border-primary scale-105" 
+              : "border-white/10 hover:border-white/30"
+          }`}
+        >
+          {/* Drag Handle */}
+          <div className="absolute top-2 left-2 z-10 p-1.5 rounded bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
+            <GripVertical className="w-4 h-4 text-white" />
+          </div>
+
+          {/* Order Number */}
+          <div className="absolute top-2 right-2 z-10 w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-medium">
+            {index + 1}
+          </div>
+
+          {/* Image */}
+          <img
+            src={getImageUrl(image)}
+            alt={image.filename}
+            className="w-full h-40 object-cover"
+            draggable={false}
+          />
+
+          {/* Delete Overlay */}
+          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+            <Button
+              variant="destructive"
+              size="icon"
+              onClick={() => onDelete(image.id)}
+              className="rounded-full"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </div>
+
+          {/* Filename */}
+          <div className="absolute bottom-0 left-0 right-0 bg-black/70 p-2">
+            <p className="text-xs text-white truncate">{image.filename}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// Drop Zone for multiple images
+const DropZone = ({ onUpload, uploading }) => {
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith("image/"));
+    if (files.length > 0) {
+      onUpload(files);
+    }
+  };
+
+  const handleClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
+      onUpload(files);
+      e.target.value = "";
+    }
+  };
+
+  return (
+    <div
+      onClick={handleClick}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${
+        isDragging 
+          ? "border-primary bg-primary/10" 
+          : "border-white/20 hover:border-white/40 hover:bg-white/5"
+      }`}
+    >
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        className="hidden"
+        onChange={handleFileChange}
+      />
+      {uploading ? (
+        <div className="flex flex-col items-center gap-3">
+          <RefreshCw className="w-10 h-10 text-primary animate-spin" />
+          <p className="text-sm text-muted-foreground">Uploading...</p>
+        </div>
+      ) : (
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center">
+            <Plus className="w-8 h-8 text-muted-foreground" />
+          </div>
+          <div>
+            <p className="text-lg font-medium">Drop images here</p>
+            <p className="text-sm text-muted-foreground mt-1">or click to browse</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default function AdminPanel() {
   const navigate = useNavigate();
   const [settings, setSettings] = useState({
@@ -57,25 +244,22 @@ export default function AdminPanel() {
     news_refresh: 30,
     display_orientation: "landscape",
     display_scale: 100,
-    display_width: 16,
-    display_height: 9,
+    enable_weather_animations: true,
   });
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
 
-  // Fetch settings
   const fetchSettings = useCallback(async () => {
     try {
       const response = await axios.get(`${API}/settings`);
-      setSettings(response.data);
+      setSettings(prev => ({ ...prev, ...response.data }));
     } catch (error) {
       console.error("Error fetching settings:", error);
       toast.error("Failed to load settings");
     }
   }, []);
 
-  // Fetch images
   const fetchImages = useCallback(async () => {
     try {
       const response = await axios.get(`${API}/images`);
@@ -91,7 +275,6 @@ export default function AdminPanel() {
     fetchImages();
   }, [fetchSettings, fetchImages]);
 
-  // Save settings
   const handleSaveSettings = async () => {
     setLoading(true);
     try {
@@ -105,43 +288,50 @@ export default function AdminPanel() {
     }
   };
 
-  // Upload image
-  const handleUploadImage = async (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
+  const handleUploadImages = async (files) => {
     setUploading(true);
-    const formData = new FormData();
-    formData.append("file", file);
-
-    try {
-      const response = await axios.post(`${API}/images`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      setImages((prev) => [...prev, response.data]);
-      toast.success("Image uploaded successfully");
-    } catch (error) {
-      console.error("Error uploading image:", error);
-      toast.error("Failed to upload image");
-    } finally {
-      setUploading(false);
-      event.target.value = "";
+    let successCount = 0;
+    
+    for (const file of files) {
+      const formData = new FormData();
+      formData.append("file", file);
+      
+      try {
+        const response = await axios.post(`${API}/images`, formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+        setImages((prev) => [...prev, response.data]);
+        successCount++;
+      } catch (error) {
+        console.error("Error uploading image:", error);
+      }
+    }
+    
+    setUploading(false);
+    if (successCount > 0) {
+      toast.success(`${successCount} image${successCount > 1 ? 's' : ''} uploaded`);
+    }
+    if (successCount < files.length) {
+      toast.error(`${files.length - successCount} upload${files.length - successCount > 1 ? 's' : ''} failed`);
     }
   };
 
-  // Delete image
   const handleDeleteImage = async (imageId) => {
     try {
       await axios.delete(`${API}/images/${imageId}`);
       setImages((prev) => prev.filter((img) => img.id !== imageId));
-      toast.success("Image deleted successfully");
+      toast.success("Image deleted");
     } catch (error) {
       console.error("Error deleting image:", error);
       toast.error("Failed to delete image");
     }
   };
 
-  // Reset to default images
+  const handleReorderImages = (newImages) => {
+    setImages(newImages);
+    // Optionally save order to backend
+  };
+
   const handleResetImages = async () => {
     try {
       await axios.post(`${API}/images/reset-defaults`);
@@ -153,7 +343,6 @@ export default function AdminPanel() {
     }
   };
 
-  // Get image URL
   const getImageUrl = (image) => {
     if (image.url.startsWith("http")) return image.url;
     return `${BACKEND_URL}${image.url}`;
@@ -171,20 +360,18 @@ export default function AdminPanel() {
               variant="ghost" 
               size="icon"
               onClick={() => navigate("/")}
-              data-testid="back-to-display"
             >
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <div>
-              <h1 className="text-xl font-semibold font-sans">Admin Panel</h1>
-              <p className="text-sm text-muted-foreground">Manage your hotel lobby display</p>
+              <h1 className="text-xl font-semibold">Admin Panel</h1>
+              <p className="text-sm text-muted-foreground">Manage your lobby display</p>
             </div>
           </div>
           <Button 
             variant="outline" 
             onClick={() => navigate("/")}
             className="gap-2"
-            data-testid="preview-display"
           >
             <Eye className="w-4 h-4" />
             Preview Display
@@ -194,53 +381,89 @@ export default function AdminPanel() {
 
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-6 py-8">
-        <Tabs defaultValue="settings" className="space-y-8">
+        <Tabs defaultValue="images" className="space-y-8">
           <TabsList className="bg-card border border-white/10">
-            <TabsTrigger value="settings" className="gap-2" data-testid="settings-tab">
-              <Settings className="w-4 h-4" />
-              Settings
-            </TabsTrigger>
-            <TabsTrigger value="images" className="gap-2" data-testid="images-tab">
+            <TabsTrigger value="images" className="gap-2">
               <ImageIcon className="w-4 h-4" />
               Images
             </TabsTrigger>
+            <TabsTrigger value="settings" className="gap-2">
+              <Settings className="w-4 h-4" />
+              Settings
+            </TabsTrigger>
+            <TabsTrigger value="display" className="gap-2">
+              <Monitor className="w-4 h-4" />
+              Display
+            </TabsTrigger>
           </TabsList>
+
+          {/* Images Tab */}
+          <TabsContent value="images" className="space-y-6">
+            <Card className="bg-card border-white/10">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <ImageIcon className="w-5 h-5" />
+                      Hotel Slideshow Images
+                    </CardTitle>
+                    <CardDescription>
+                      Drag to reorder • Drop multiple images to upload
+                    </CardDescription>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    onClick={handleResetImages}
+                    className="gap-2"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    Reset to Defaults
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Drop Zone */}
+                <DropZone onUpload={handleUploadImages} uploading={uploading} />
+
+                {/* Image Grid */}
+                <ImageGrid 
+                  images={images}
+                  onReorder={handleReorderImages}
+                  onDelete={handleDeleteImage}
+                  getImageUrl={getImageUrl}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           {/* Settings Tab */}
           <TabsContent value="settings" className="space-y-6">
-            <Card className="bg-card border-white/10" data-testid="admin-settings-form">
+            <Card className="bg-card border-white/10">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Building2 className="w-5 h-5" />
                   Hotel Information
                 </CardTitle>
-                <CardDescription>
-                  Configure your hotel name and location
-                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid gap-6 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="hotel_name">Hotel Name</Label>
+                    <Label>Hotel Name</Label>
                     <Input
-                      id="hotel_name"
                       value={settings.hotel_name}
                       onChange={(e) => setSettings({ ...settings, hotel_name: e.target.value })}
                       placeholder="Enter hotel name"
-                      data-testid="admin-name-input"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="city" className="flex items-center gap-2">
+                    <Label className="flex items-center gap-2">
                       <MapPin className="w-4 h-4" />
-                      City / Location
+                      Weather Location
                     </Label>
                     <Input
-                      id="city"
                       value={settings.city}
                       onChange={(e) => setSettings({ ...settings, city: e.target.value })}
-                      placeholder="Enter city for weather"
-                      data-testid="admin-city-input"
+                      placeholder="City, State"
                     />
                   </div>
                 </div>
@@ -253,19 +476,16 @@ export default function AdminPanel() {
                   <Newspaper className="w-5 h-5" />
                   News Settings
                 </CardTitle>
-                <CardDescription>
-                  Configure the news category for headlines
-                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  <Label htmlFor="news_category">News Category</Label>
+                  <Label>News Category</Label>
                   <Select
                     value={settings.news_category}
                     onValueChange={(value) => setSettings({ ...settings, news_category: value })}
                   >
-                    <SelectTrigger data-testid="news-category-select">
-                      <SelectValue placeholder="Select category" />
+                    <SelectTrigger>
+                      <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       {NEWS_CATEGORIES.map((cat) => (
@@ -283,48 +503,39 @@ export default function AdminPanel() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Clock className="w-5 h-5" />
-                  Timing Settings
+                  Timing & Refresh
                 </CardTitle>
-                <CardDescription>
-                  Configure refresh intervals and photo rotation
-                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
+              <CardContent>
                 <div className="grid gap-6 md:grid-cols-3">
                   <div className="space-y-2">
-                    <Label htmlFor="photo_interval">Photo Interval (seconds)</Label>
+                    <Label>Photo Interval (seconds)</Label>
                     <Input
-                      id="photo_interval"
                       type="number"
                       min="3"
                       max="60"
                       value={settings.photo_interval}
                       onChange={(e) => setSettings({ ...settings, photo_interval: parseInt(e.target.value) || 8 })}
-                      data-testid="photo-interval-input"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="weather_refresh">Weather Refresh (minutes)</Label>
+                    <Label>Weather Refresh (minutes)</Label>
                     <Input
-                      id="weather_refresh"
                       type="number"
                       min="5"
                       max="60"
                       value={settings.weather_refresh}
                       onChange={(e) => setSettings({ ...settings, weather_refresh: parseInt(e.target.value) || 15 })}
-                      data-testid="weather-refresh-input"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="news_refresh">News Refresh (minutes)</Label>
+                    <Label>News Refresh (minutes)</Label>
                     <Input
-                      id="news_refresh"
                       type="number"
                       min="10"
                       max="120"
                       value={settings.news_refresh}
                       onChange={(e) => setSettings({ ...settings, news_refresh: parseInt(e.target.value) || 30 })}
-                      data-testid="news-refresh-input"
                     />
                   </div>
                 </div>
@@ -334,67 +545,74 @@ export default function AdminPanel() {
             <Card className="bg-card border-white/10">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
+                  <CloudSun className="w-5 h-5" />
+                  Weather Animations
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">Enable Weather-Reactive Animations</p>
+                    <p className="text-sm text-muted-foreground">Show animated backgrounds based on weather</p>
+                  </div>
+                  <Switch
+                    checked={settings.enable_weather_animations !== false}
+                    onCheckedChange={(checked) => setSettings({ ...settings, enable_weather_animations: checked })}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="flex justify-end">
+              <Button onClick={handleSaveSettings} disabled={loading} className="gap-2">
+                <Save className="w-4 h-4" />
+                {loading ? "Saving..." : "Save Settings"}
+              </Button>
+            </div>
+          </TabsContent>
+
+          {/* Display Tab */}
+          <TabsContent value="display" className="space-y-6">
+            <Card className="bg-card border-white/10">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
                   <Monitor className="w-5 h-5" />
                   Display Settings
                 </CardTitle>
                 <CardDescription>
-                  Configure screen orientation and size for your TV display
+                  Configure screen orientation and size
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Orientation Selection */}
+                {/* Orientation */}
                 <div className="space-y-3">
-                  <Label>Screen Orientation & Size</Label>
+                  <Label>Screen Orientation</Label>
                   <div className="grid grid-cols-3 gap-4">
-                    <button
-                      onClick={() => setSettings({ ...settings, display_orientation: "landscape", display_width: 16, display_height: 9 })}
-                      className={`flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all ${
-                        settings.display_orientation === "landscape"
-                          ? "border-primary bg-primary/10"
-                          : "border-white/10 hover:border-white/20"
-                      }`}
-                      data-testid="orientation-landscape"
-                    >
-                      <div className="w-24 h-14 rounded-lg border-2 border-current flex items-center justify-center">
-                        <Monitor className="w-8 h-5" />
-                      </div>
-                      <span className="text-sm font-medium">Landscape</span>
-                      <span className="text-xs text-muted-foreground">16:9 Horizontal</span>
-                    </button>
-                    <button
-                      onClick={() => setSettings({ ...settings, display_orientation: "portrait", display_width: 9, display_height: 16 })}
-                      className={`flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all ${
-                        settings.display_orientation === "portrait"
-                          ? "border-primary bg-primary/10"
-                          : "border-white/10 hover:border-white/20"
-                      }`}
-                      data-testid="orientation-portrait"
-                    >
-                      <div className="w-14 h-24 rounded-lg border-2 border-current flex items-center justify-center">
-                        <Smartphone className="w-5 h-8" />
-                      </div>
-                      <span className="text-sm font-medium">Portrait</span>
-                      <span className="text-xs text-muted-foreground">9:16 Vertical</span>
-                    </button>
-                    <button
-                      onClick={() => setSettings({ ...settings, display_orientation: "standard", display_width: 7.5, display_height: 10 })}
-                      className={`flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all ${
-                        settings.display_orientation === "standard"
-                          ? "border-primary bg-primary/10"
-                          : "border-white/10 hover:border-white/20"
-                      }`}
-                      data-testid="orientation-standard"
-                    >
-                      <div className="w-14 h-20 rounded-lg border-2 border-current flex items-center justify-center">
-                        <Monitor className="w-5 h-6" />
-                      </div>
-                      <span className="text-sm font-medium">Standard</span>
-                      <span className="text-xs text-muted-foreground">3:4 (7.5" × 10")</span>
-                    </button>
+                    {[
+                      { value: "landscape", label: "Landscape", ratio: "16:9", icon: Monitor, w: "w-20", h: "h-12" },
+                      { value: "portrait", label: "Portrait", ratio: "9:16", icon: Smartphone, w: "w-12", h: "h-20" },
+                      { value: "standard", label: "Standard", ratio: "4:3", icon: Monitor, w: "w-16", h: "h-12" },
+                    ].map((opt) => (
+                      <button
+                        key={opt.value}
+                        onClick={() => setSettings({ ...settings, display_orientation: opt.value })}
+                        className={`flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all ${
+                          settings.display_orientation === opt.value
+                            ? "border-primary bg-primary/10"
+                            : "border-white/10 hover:border-white/20"
+                        }`}
+                      >
+                        <div className={`${opt.w} ${opt.h} rounded-lg border-2 border-current flex items-center justify-center`}>
+                          <opt.icon className="w-5 h-5 opacity-50" />
+                        </div>
+                        <span className="text-sm font-medium">{opt.label}</span>
+                        <span className="text-xs text-muted-foreground">{opt.ratio}</span>
+                      </button>
+                    ))}
                   </div>
                 </div>
 
-                {/* Scale/Size Slider */}
+                {/* Scale */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <Label className="flex items-center gap-2">
@@ -411,38 +629,27 @@ export default function AdminPanel() {
                     min={50}
                     max={150}
                     step={5}
-                    className="w-full"
-                    data-testid="display-scale-slider"
                   />
                   <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>50% (Smaller)</span>
-                    <span>100% (Default)</span>
-                    <span>150% (Larger)</span>
+                    <span>50%</span>
+                    <span>100%</span>
+                    <span>150%</span>
                   </div>
                 </div>
 
-                {/* Preview Box */}
-                <div className="p-4 bg-secondary/50 rounded-xl">
-                  <p className="text-sm text-muted-foreground mb-3">Preview</p>
+                {/* Preview */}
+                <div className="p-6 bg-secondary/30 rounded-xl">
+                  <p className="text-sm text-muted-foreground mb-4 text-center">Preview</p>
                   <div className="flex justify-center">
                     <div 
-                      className={`bg-gradient-to-br from-slate-700 to-slate-900 rounded-lg flex flex-col items-center justify-center text-white/50 text-xs transition-all`}
-                      style={{ 
-                        width: settings.display_orientation === "landscape" ? '128px' : 
-                               settings.display_orientation === "portrait" ? '80px' : '75px',
-                        height: settings.display_orientation === "landscape" ? '80px' : 
-                                settings.display_orientation === "portrait" ? '128px' : '100px',
+                      className="bg-gradient-to-br from-slate-700 to-slate-900 rounded-lg flex items-center justify-center text-white/40 text-xs transition-all"
+                      style={{
+                        width: settings.display_orientation === "landscape" ? 160 : settings.display_orientation === "portrait" ? 90 : 120,
+                        height: settings.display_orientation === "landscape" ? 90 : settings.display_orientation === "portrait" ? 160 : 90,
                         transform: `scale(${settings.display_scale / 100})`,
-                        transformOrigin: 'center'
                       }}
                     >
-                      <span>
-                        {settings.display_orientation === "landscape" ? "16:9" : 
-                         settings.display_orientation === "portrait" ? "9:16" : "3:4"}
-                      </span>
-                      {settings.display_orientation === "standard" && (
-                        <span className="text-[10px] mt-1">7.5" × 10"</span>
-                      )}
+                      {settings.display_orientation === "landscape" ? "16:9" : settings.display_orientation === "portrait" ? "9:16" : "4:3"}
                     </div>
                   </div>
                 </div>
@@ -450,108 +657,11 @@ export default function AdminPanel() {
             </Card>
 
             <div className="flex justify-end">
-              <Button 
-                onClick={handleSaveSettings} 
-                disabled={loading}
-                className="gap-2"
-                data-testid="admin-save-button"
-              >
+              <Button onClick={handleSaveSettings} disabled={loading} className="gap-2">
                 <Save className="w-4 h-4" />
                 {loading ? "Saving..." : "Save Settings"}
               </Button>
             </div>
-          </TabsContent>
-
-          {/* Images Tab */}
-          <TabsContent value="images" className="space-y-6">
-            <Card className="bg-card border-white/10">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <ImageIcon className="w-5 h-5" />
-                      Hotel Images
-                    </CardTitle>
-                    <CardDescription>
-                      Upload and manage images for the rotating display
-                    </CardDescription>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button 
-                      variant="outline" 
-                      onClick={handleResetImages}
-                      className="gap-2"
-                      data-testid="reset-images-button"
-                    >
-                      <RefreshCw className="w-4 h-4" />
-                      Reset to Defaults
-                    </Button>
-                    <Label 
-                      htmlFor="image-upload" 
-                      className="cursor-pointer"
-                    >
-                      <Button 
-                        asChild 
-                        disabled={uploading}
-                        className="gap-2"
-                        data-testid="upload-image-button"
-                      >
-                        <span>
-                          <Upload className="w-4 h-4" />
-                          {uploading ? "Uploading..." : "Upload Image"}
-                        </span>
-                      </Button>
-                    </Label>
-                    <Input
-                      id="image-upload"
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleUploadImage}
-                      data-testid="image-upload-input"
-                    />
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {images.length === 0 ? (
-                  <div className="text-center py-12 text-muted-foreground">
-                    <ImageIcon className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>No images uploaded yet</p>
-                    <p className="text-sm">Upload images to display in the lobby</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {images.map((image) => (
-                      <div 
-                        key={image.id} 
-                        className="relative group rounded-lg overflow-hidden border border-white/10"
-                        data-testid={`image-card-${image.id}`}
-                      >
-                        <img
-                          src={getImageUrl(image)}
-                          alt={image.filename}
-                          className="w-full h-40 object-cover"
-                        />
-                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <Button
-                            variant="destructive"
-                            size="icon"
-                            onClick={() => handleDeleteImage(image.id)}
-                            data-testid={`delete-image-${image.id}`}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                        <div className="absolute bottom-0 left-0 right-0 bg-black/60 p-2">
-                          <p className="text-xs text-white truncate">{image.filename}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
           </TabsContent>
         </Tabs>
       </main>
