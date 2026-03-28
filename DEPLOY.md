@@ -44,8 +44,8 @@ mongodb+srv://youruser:yourpassword@cluster0.abc123.mongodb.net/hotel_lobby?retr
    | `MONGO_URL` | `mongodb+srv://youruser:yourpass@cluster0.xxx.mongodb.net/hotel_lobby?retryWrites=true&w=majority` |
    | `DB_NAME` | `hotel_lobby` |
    | `CORS_ORIGINS` | `https://your-app.vercel.app` (update after Vercel deploy) |
-   | `WEATHERAPI_KEY` | `b0424380d5334d70a54192632262803` |
-   | `NEWS_API_KEY` | `cb070f8c007f4ab396a629e24cd29c15` |
+   | `WEATHERAPI_KEY` | Your WeatherAPI.com key |
+   | `NEWS_API_KEY` | Your NewsAPI.org key |
 
 6. Click **"Create Web Service"**
 7. Wait for deploy — copy the URL (e.g., `https://hotel-lobby-api.onrender.com`)
