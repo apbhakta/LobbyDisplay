@@ -48,7 +48,7 @@ logger = logging.getLogger(__name__)
 class Settings(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = "hotel_settings"
-    hotel_name: str = "Velkommen Inn"
+    hotel_name: str = ""
     city: str = "Clifton, Texas"
     news_category: str = "general"
     photo_interval: int = 8
@@ -304,7 +304,7 @@ FALLBACK_FORECAST = [
 ]
 
 FALLBACK_HEADLINES = [
-    {"title": "Welcome to Velkommen Inn — Where Comfort Meets Elegance", "source": "Hotel News", "url": "#", "is_fallback": True},
+    {"title": "Welcome — Enjoy Your Stay and Explore Clifton, Texas", "source": "Hotel News", "url": "#", "is_fallback": True},
     {"title": "Experience the Heart of Texas Hospitality", "source": "Travel Today", "url": "#", "is_fallback": True},
     {"title": "Discover Local Attractions and Hidden Gems Nearby", "source": "Explore Texas", "url": "#", "is_fallback": True}
 ]

@@ -307,7 +307,6 @@ const LivePreview = ({ settings, weather }) => {
   const isPortrait = settings.display_orientation === "portrait";
   const ratioW = parseFloat(settings.display_width) || 16;
   const ratioH = parseFloat(settings.display_height) || 9;
-  const layout = settings.widget_layout || "bottom-left";
   
   const maxW = 480;
   const maxH = 320;
@@ -333,16 +332,16 @@ const LivePreview = ({ settings, weather }) => {
     return "linear-gradient(180deg, #475569 0%, #64748b 40%, #94a3b8 100%)";
   };
 
-  // Mini widget blocks
-  const hotelBlock = <div className="bg-white/20 rounded h-2 w-14 mb-0.5" />;
-  const clockBlock = <div className="bg-white/25 rounded h-3 w-12 mb-0.5" />;
+  // Miniature widget blocks for the info panel
+  const clockBlock = <div className="bg-white/30 rounded h-2.5 w-10 mb-0.5" />;
+  const dateBlock = <div className="bg-white/15 rounded h-1 w-14" />;
   const weatherBlock = (
-    <div className="p-1 rounded bg-white/15 backdrop-blur">
+    <div className="p-1 rounded bg-white/15">
       <div className="flex items-center gap-1">
-        <div className="w-4 h-4 rounded bg-white/20" />
+        <div className="w-3 h-3 rounded bg-white/20" />
         <div>
-          <div className="bg-white/30 rounded h-1.5 w-7 mb-0.5" />
-          <div className="bg-white/15 rounded h-1 w-10" />
+          <div className="bg-white/30 rounded h-1.5 w-6 mb-0.5" />
+          <div className="bg-white/15 rounded h-1 w-9" />
         </div>
       </div>
     </div>
@@ -354,87 +353,72 @@ const LivePreview = ({ settings, weather }) => {
     </div>
   );
 
-  const renderLayoutPreview = () => {
+  const renderSeparatedLayout = () => {
     if (isPortrait) {
+      // Portrait: Photo top (65%), Info panel bottom (35%)
       return (
-        <div className="absolute inset-0 p-2.5 flex flex-col">
-          <div className="text-center">{hotelBlock}</div>
-          <div className="text-center mt-1">{clockBlock}</div>
-          <div className="flex-1" />
-          <div className="mb-1">{weatherBlock}</div>
-          {newsBlock}
+        <div className="absolute inset-0 flex flex-col">
+          {/* Photo area */}
+          <div className="flex-[65] relative overflow-hidden" style={{ background: getThemeBg() }}>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-6 h-6 rounded border border-white/20 flex items-center justify-center">
+                <div className="w-3 h-3 rounded-sm bg-white/15" />
+              </div>
+            </div>
+            <div className="absolute bottom-0 left-0 right-0 h-2 bg-gradient-to-t from-slate-900/60 to-transparent" />
+          </div>
+          {/* Info panel - separate, no overlap */}
+          <div className="flex-[35] bg-slate-900/95 p-2 flex flex-col justify-between">
+            <div>
+              {clockBlock}
+              <div className="mt-0.5">{dateBlock}</div>
+            </div>
+            <div className="space-y-1">
+              {weatherBlock}
+              {newsBlock}
+            </div>
+          </div>
         </div>
       );
     }
-    switch (layout) {
-      case "top-right":
-        return (
-          <div className="absolute inset-0 p-2.5 flex flex-col">
-            <div className="flex justify-between items-start">
-              <div>{clockBlock}</div>
-              <div className="flex flex-col items-end gap-1">
-                {weatherBlock}
-                <div className="w-16">{newsBlock}</div>
-              </div>
-            </div>
-            <div className="flex-1" />
-            <div>{hotelBlock}</div>
-          </div>
-        );
-      case "bottom-bar":
-        return (
-          <div className="absolute inset-0 p-2.5 flex flex-col">
-            <div className="flex justify-between">{hotelBlock}{clockBlock}</div>
-            <div className="flex-1" />
-            <div className="flex items-end gap-2">
-              <div className="flex-shrink-0">{weatherBlock}</div>
-              <div className="flex-1">{newsBlock}</div>
+
+    // Landscape: Photo left (68%), Info panel right (32%)
+    return (
+      <div className="absolute inset-0 flex">
+        {/* Photo area */}
+        <div className="flex-[68] relative overflow-hidden" style={{ background: getThemeBg() }}>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-8 h-6 rounded border border-white/20 flex items-center justify-center">
+              <div className="w-4 h-3 rounded-sm bg-white/15" />
             </div>
           </div>
-        );
-      case "centered":
-        return (
-          <div className="absolute inset-0 p-2.5 flex flex-col items-center justify-center gap-1">
-            {hotelBlock}{clockBlock}
-            <div className="h-1" />
+          <div className="absolute top-0 right-0 bottom-0 w-1 bg-gradient-to-l from-slate-900/40 to-transparent" />
+        </div>
+        {/* Info panel - separate, no overlap */}
+        <div className="flex-[32] bg-slate-900/95 p-2 flex flex-col justify-between">
+          <div>
+            {clockBlock}
+            <div className="mt-0.5">{dateBlock}</div>
+          </div>
+          <div className="space-y-1">
             {weatherBlock}
-            <div className="w-20">{newsBlock}</div>
+            {newsBlock}
           </div>
-        );
-      case "split":
-        return (
-          <div className="absolute inset-0 flex">
-            <div className="flex-1" />
-            <div className="w-[40%] bg-black/30 p-2 flex flex-col justify-between">
-              <div>{hotelBlock}<div className="mt-1">{clockBlock}</div></div>
-              <div className="space-y-1">{weatherBlock}{newsBlock}</div>
-            </div>
-          </div>
-        );
-      default: // bottom-left
-        return (
-          <div className="absolute inset-0 p-2.5 flex flex-col">
-            <div className="flex justify-between">{hotelBlock}{clockBlock}</div>
-            <div className="flex-1" />
-            <div className="flex justify-between items-end gap-2">
-              {weatherBlock}
-              <div className="max-w-[45%]">{newsBlock}</div>
-            </div>
-          </div>
-        );
-    }
+        </div>
+      </div>
+    );
   };
 
   return (
     <div className="flex flex-col items-center gap-4" data-testid="live-preview">
       <div 
         className="relative rounded-lg overflow-hidden shadow-2xl border border-white/20"
-        style={{ width: previewW, height: previewH, background: getThemeBg() }}
+        style={{ width: previewW, height: previewH }}
         data-testid="preview-canvas"
       >
-        <div className="absolute inset-0 bg-black/20" />
-        {renderLayoutPreview()}
-        <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-0.5">
+        {renderSeparatedLayout()}
+        {/* Slide indicators */}
+        <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-0.5 z-10">
           <div className="w-3 h-0.5 rounded-full bg-white/80" />
           <div className="w-0.5 h-0.5 rounded-full bg-white/30" />
           <div className="w-0.5 h-0.5 rounded-full bg-white/30" />
@@ -460,7 +444,7 @@ const LivePreview = ({ settings, weather }) => {
         </div>
         <div className="flex justify-between gap-4">
           <span className="text-muted-foreground">Layout:</span>
-          <span className="font-medium capitalize">{(settings.widget_layout || "bottom-left").replace("-", " ")}</span>
+          <span className="font-medium">Separated Panel</span>
         </div>
         <div className="flex justify-between gap-4">
           <span className="text-muted-foreground">Widget Scale:</span>
@@ -474,7 +458,7 @@ const LivePreview = ({ settings, weather }) => {
 export default function AdminPanel() {
   const navigate = useNavigate();
   const [settings, setSettings] = useState({
-    hotel_name: "Velkommen Inn",
+    hotel_name: "",
     city: "Clifton, Texas",
     news_category: "general",
     photo_interval: 8,
@@ -2073,87 +2057,54 @@ export default function AdminPanel() {
                   </CardContent>
                 </Card>
 
-                {/* Widget Layout Presets */}
+                {/* Layout Info */}
                 <Card className="bg-card border-white/10">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Maximize2 className="w-5 h-5" />
-                      Widget Layout
+                      Display Layout
                     </CardTitle>
-                    <CardDescription>Choose how widgets are positioned on photo slides</CardDescription>
+                    <CardDescription>Photo and widget areas are strictly separated for maximum visual impact</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-5 gap-3" data-testid="layout-presets">
-                      {[
-                        { value: "bottom-left", label: "Bottom Left", desc: "Classic" },
-                        { value: "top-right", label: "Top Right", desc: "Info panel" },
-                        { value: "bottom-bar", label: "Bottom Bar", desc: "Full width" },
-                        { value: "centered", label: "Centered", desc: "Focus" },
-                        { value: "split", label: "Split", desc: "Side panel" },
-                      ].map((preset) => {
-                        const isActive = (settings.widget_layout || "bottom-left") === preset.value;
-                        return (
-                          <button
-                            key={preset.value}
-                            onClick={() => setSettings(prev => ({ ...prev, widget_layout: preset.value }))}
-                            data-testid={`layout-${preset.value}`}
-                            className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${
-                              isActive
-                                ? "border-primary bg-primary/10 ring-1 ring-primary/30"
-                                : "border-white/10 hover:border-white/25 hover:bg-white/5"
-                            }`}
-                          >
-                            {/* Mini layout preview */}
-                            <div className="w-14 h-9 rounded border border-current/40 relative overflow-hidden bg-white/5">
-                              {preset.value === "bottom-left" && (
-                                <>
-                                  <div className="absolute top-1 left-1 w-4 h-1 rounded-sm bg-current/40" />
-                                  <div className="absolute top-1 right-1 w-3 h-2 rounded-sm bg-current/30" />
-                                  <div className="absolute bottom-1 left-1 w-5 h-2 rounded-sm bg-current/50" />
-                                  <div className="absolute bottom-1 right-1 w-4 h-1.5 rounded-sm bg-current/30" />
-                                </>
-                              )}
-                              {preset.value === "top-right" && (
-                                <>
-                                  <div className="absolute top-1 right-1 w-5 h-2 rounded-sm bg-current/50" />
-                                  <div className="absolute top-3.5 right-1 w-4 h-1.5 rounded-sm bg-current/30" />
-                                  <div className="absolute bottom-1 left-1 w-4 h-1 rounded-sm bg-current/40" />
-                                </>
-                              )}
-                              {preset.value === "bottom-bar" && (
-                                <>
-                                  <div className="absolute top-1 left-1 w-4 h-1 rounded-sm bg-current/40" />
-                                  <div className="absolute top-1 right-1 w-3 h-2 rounded-sm bg-current/30" />
-                                  <div className="absolute bottom-0 left-0 right-0 h-3 bg-current/20 flex items-center px-1 gap-0.5">
-                                    <div className="w-3 h-1.5 rounded-sm bg-current/50" />
-                                    <div className="flex-1" />
-                                    <div className="w-4 h-1 rounded-sm bg-current/30" />
-                                  </div>
-                                </>
-                              )}
-                              {preset.value === "centered" && (
-                                <>
-                                  <div className="absolute top-1 left-1/2 -translate-x-1/2 w-5 h-1 rounded-sm bg-current/40" />
-                                  <div className="absolute top-2.5 left-1/2 -translate-x-1/2 w-3 h-1.5 rounded-sm bg-current/30" />
-                                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-6 h-2 rounded-sm bg-current/50" />
-                                  <div className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-5 h-1 rounded-sm bg-current/30" />
-                                </>
-                              )}
-                              {preset.value === "split" && (
-                                <>
-                                  <div className="absolute top-0 right-0 bottom-0 w-[45%] bg-current/15" />
-                                  <div className="absolute top-1 right-0.5 w-4 h-1 rounded-sm bg-current/50" />
-                                  <div className="absolute top-2.5 right-0.5 w-3 h-1 rounded-sm bg-current/30" />
-                                  <div className="absolute bottom-2 right-0.5 w-4 h-1.5 rounded-sm bg-current/40" />
-                                  <div className="absolute bottom-0.5 right-0.5 w-4 h-1 rounded-sm bg-current/30" />
-                                </>
-                              )}
+                    <div className="p-4 rounded-xl bg-muted/30 border border-white/5">
+                      <div className="flex items-center gap-4">
+                        {/* Mini layout diagram */}
+                        <div className="w-24 h-14 rounded border border-white/20 flex overflow-hidden flex-shrink-0">
+                          {settings.display_orientation === "portrait" ? (
+                            <div className="flex flex-col w-full">
+                              <div className="flex-[65] bg-white/10 flex items-center justify-center">
+                                <ImageIcon className="w-3 h-3 text-white/30" />
+                              </div>
+                              <div className="flex-[35] bg-slate-800 border-t border-white/10 p-0.5">
+                                <div className="bg-white/20 rounded h-0.5 w-3 mb-0.5" />
+                                <div className="bg-white/10 rounded h-0.5 w-4" />
+                              </div>
                             </div>
-                            <span className="text-xs font-semibold">{preset.label}</span>
-                            <span className="text-[10px] text-muted-foreground">{preset.desc}</span>
-                          </button>
-                        );
-                      })}
+                          ) : (
+                            <div className="flex w-full">
+                              <div className="flex-[68] bg-white/10 flex items-center justify-center">
+                                <ImageIcon className="w-3 h-3 text-white/30" />
+                              </div>
+                              <div className="flex-[32] bg-slate-800 border-l border-white/10 p-0.5 flex flex-col justify-between">
+                                <div className="bg-white/20 rounded h-0.5 w-3" />
+                                <div>
+                                  <div className="bg-white/15 rounded h-0.5 w-4 mb-0.5" />
+                                  <div className="bg-white/10 rounded h-0.5 w-3" />
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">Separated Panel Layout</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {settings.display_orientation === "portrait" 
+                              ? "Photo fills the top 65%, clock/weather/news in a dedicated panel below" 
+                              : "Photo fills the left 68%, clock/weather/news in a dedicated panel on the right"}
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>

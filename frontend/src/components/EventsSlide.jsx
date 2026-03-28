@@ -18,13 +18,7 @@ const CATEGORY_COLORS = {
   education: "from-cyan-500 to-blue-500",
 };
 
-// Fallback events if API returns empty
-const FALLBACK_EVENTS = [
-  { title: "Clifton Norwegian Heritage Festival", description: "Annual celebration of Norwegian roots with food, music, and crafts", event_date: "2026-04-18", start_time: "9:00 AM", end_time: "5:00 PM", location: "Downtown Clifton", category: "festival", featured: true },
-  { title: "Bosque County Farmers Market", description: "Fresh local produce, baked goods, and artisan items", event_date: "2026-04-05", start_time: "8:00 AM", end_time: "12:00 PM", location: "Clifton City Park", category: "market", featured: false },
-  { title: "Live Music at Cliftex Theatre", description: "Local bands performing country and folk music", event_date: "2026-04-12", start_time: "7:00 PM", end_time: "10:00 PM", location: "Cliftex Theatre", category: "music", featured: true },
-  { title: "Spring Trail Hike", description: "Guided nature hike through Meridian State Park", event_date: "2026-04-20", start_time: "8:00 AM", end_time: "11:00 AM", location: "Meridian State Park", category: "outdoor", featured: false },
-];
+// No fallback events — all managed via admin panel
 
 function formatEventDate(dateStr) {
   if (!dateStr) return "";
@@ -39,7 +33,21 @@ function formatEventDate(dateStr) {
 export default function EventsSlide({ weather, currentTime, isPortrait, events: dynamicEvents, maxItems }) {
   const allEvents = (dynamicEvents && dynamicEvents.length > 0)
     ? dynamicEvents.filter(e => e.enabled !== false)
-    : FALLBACK_EVENTS;
+    : [];
+
+  // Empty state — no events configured
+  if (allEvents.length === 0) {
+    return (
+      <div className="w-full h-full relative overflow-hidden" data-testid="events-slide">
+        <WeatherBackground condition={weather?.condition} icon={weather?.icon} />
+        <div className="absolute inset-0 bg-black/30 z-[1]" />
+        <div className="relative z-10 h-full flex flex-col items-center justify-center">
+          <Calendar className="w-12 h-12 text-white/15 mb-4" />
+          <p className="text-white/20 text-lg tracking-widest uppercase">Events coming soon</p>
+        </div>
+      </div>
+    );
+  }
 
   const limit = maxItems || 8;
   const featuredEvents = allEvents.filter(e => e.featured).slice(0, Math.min(4, limit));

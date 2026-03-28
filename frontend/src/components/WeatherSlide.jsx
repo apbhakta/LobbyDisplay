@@ -175,11 +175,6 @@ export default function WeatherSlide({ weather, forecast, currentTime, isPortrai
       ]
     : [
         { day: "Today", icon: weather.icon, temp_max: weather.temp_max, temp_min: weather.temp_min, condition: weather.condition },
-        { day: "Sunday", icon: "02d", temp_max: 45, temp_min: 38, condition: "Partly Cloudy" },
-        { day: "Monday", icon: "03d", temp_max: 48, temp_min: 40, condition: "Cloudy" },
-        { day: "Tuesday", icon: "10d", temp_max: 52, temp_min: 42, condition: "Rain" },
-        { day: "Wednesday", icon: "01d", temp_max: 55, temp_min: 44, condition: "Sunny" },
-        { day: "Thursday", icon: "02d", temp_max: 50, temp_min: 40, condition: "Partly Cloudy" },
       ];
 
   const isSnowTheme = theme === "snow";

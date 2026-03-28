@@ -15,20 +15,26 @@ const CATEGORY_ICONS = {
   hotel_recommendations: Building2,
 };
 
-// Fallback attractions if API returns empty
-const FALLBACK_ATTRACTIONS = [
-  { name: "Bosque County Courthouse", description: "Historic 1886 limestone courthouse in downtown", distance: "0.3 miles", category: "museums", image_url: "https://images.unsplash.com/photo-1555883006-87e8e3c5f4cf?w=400" },
-  { name: "Clifton Lutheran Church", description: "Historic Rock Church celebrating Norwegian heritage since 1886", distance: "0.5 miles", category: "museums", image_url: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400" },
-  { name: "Bosque Museum", description: "Preserving the history and culture of Bosque County", distance: "0.4 miles", category: "museums", image_url: "https://images.unsplash.com/photo-1566127444979-b3d2b654e3d7?w=400" },
-  { name: "Meridian State Park", description: "Scenic park with lake, hiking trails, and wildlife", distance: "12 miles", category: "parks", image_url: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400" },
-  { name: "Norse Historic District", description: "Authentic Norwegian heritage and architecture", distance: "8 miles", category: "outdoor", image_url: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400" },
-  { name: "Main Street Clifton", description: "Charming downtown with antique shops and local eateries", distance: "0.2 miles", category: "shopping", image_url: "https://images.unsplash.com/photo-1519999482648-25049ddd37b1?w=400" },
-];
+// No fallback attractions — all managed via admin panel
 
 export default function LocalAttractionsSlide({ weather, isPortrait, attractions: dynamicAttractions, maxItems }) {
   const items = (dynamicAttractions && dynamicAttractions.length > 0)
     ? dynamicAttractions.filter(a => a.enabled !== false).slice(0, maxItems || 6)
-    : FALLBACK_ATTRACTIONS.slice(0, maxItems || 6);
+    : [];
+
+  // Empty state — no attractions configured
+  if (items.length === 0) {
+    return (
+      <div className="w-full h-full relative overflow-hidden" data-testid="local-attractions-slide">
+        <WeatherBackground condition={weather?.condition} icon={weather?.icon} />
+        <div className="absolute inset-0 bg-black/30 z-[1]" />
+        <div className="relative z-10 h-full flex flex-col items-center justify-center">
+          <MapPin className="w-12 h-12 text-white/15 mb-4" />
+          <p className="text-white/20 text-lg tracking-widest uppercase">Attractions coming soon</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div 
@@ -79,7 +85,7 @@ export default function LocalAttractionsSlide({ weather, isPortrait, attractions
                       style={{ backgroundImage: `url(${imgUrl})`, filter: "brightness(0.8)" }}
                     />
                   ) : (
-                    <div className="absolute inset-0 bg-white/5" />
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/8 to-white/3" />
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                   <div className="absolute bottom-2 left-3">
@@ -97,7 +103,7 @@ export default function LocalAttractionsSlide({ weather, isPortrait, attractions
                     {attraction.description}
                   </p>
                   {attraction.distance && (
-                    <p className={`${isPortrait ? 'text-xs' : 'text-xs'} text-amber-300/70 mt-1 flex items-center gap-1`}>
+                    <p className="text-xs text-amber-300/70 mt-1 flex items-center gap-1">
                       <MapPin className="w-3 h-3" /> {attraction.distance}
                     </p>
                   )}
