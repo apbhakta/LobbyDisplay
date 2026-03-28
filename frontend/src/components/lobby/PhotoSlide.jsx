@@ -65,20 +65,20 @@ export default function PhotoSlide({
         <motion.img
           src={getImageUrl(image)}
           alt="Hotel"
-          className="absolute inset-0 w-full h-full object-cover z-[1]"
-          style={{ objectPosition: isPortrait ? 'center 30%' : 'center center' }}
-          initial={{ scale: 1.05 }}
-          animate={{ scale: 1 }}
-          transition={{ duration: 8, ease: "easeOut" }}
+          className="absolute inset-0 w-full h-full object-contain z-[1]"
+          style={{ backgroundColor: '#0f172a' }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1.5, ease: "easeOut" }}
         />
       ) : (
         <EmptyPhotoState theme={currentTheme} />
       )}
 
-      {/* Gradient overlays for readability */}
+      {/* Subtle gradient overlays — minimal to keep photo visible */}
       <div className="absolute inset-0 z-[2] pointer-events-none">
-        <div className="absolute bottom-0 left-0 right-0 h-[40%] bg-gradient-to-t from-black/50 to-transparent" />
-        <div className="absolute top-0 left-0 right-0 h-[20%] bg-gradient-to-b from-black/30 to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 h-[30%] bg-gradient-to-t from-black/30 to-transparent" />
+        <div className="absolute top-0 left-0 right-0 h-[15%] bg-gradient-to-b from-black/20 to-transparent" />
       </div>
 
       {/* Positioned widgets */}
