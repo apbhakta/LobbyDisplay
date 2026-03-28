@@ -82,6 +82,13 @@ Build a premium fullscreen hotel lobby display web app in Clifton, Texas for a 1
 ## P1 Upcoming Tasks
 - Scrolling ticker bar at the bottom for content announcements/promotions
 
+### Phase 7: Portrait 4:3 Default Display (Completed Feb 2026)
+- [x] Default display: Portrait orientation, 4:3 aspect ratio, 7.5x10 inches
+- [x] Backend, frontend, admin defaults all updated to portrait 4:3
+- [x] Smart photo cropping: `object-position: center 30%` for portrait images
+- [x] Weather slide rewrite for portrait: location/clock header, temp+icon row, 2x2 stats grid, auto-fit forecast (no cutoff)
+- [x] Portrait photo overlay: hotel name top-left, clock top-right, weather+news bottom
+
 ## P2 Backlog
 - Content sections integration into lobby display (announcements, promotions on slides)
 - Full drag-and-drop widget positioning
