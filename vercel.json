@@ -1,6 +1,7 @@
 {
   "version": 2,
-  "buildCommand": "cd frontend && yarn install && yarn build",
+  "installCommand": "cd frontend && yarn install",
+  "buildCommand": "cd frontend && yarn build",
   "outputDirectory": "frontend/build",
   "routes": [
     { "handle": "filesystem" },
