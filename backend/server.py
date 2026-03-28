@@ -33,7 +33,7 @@ UPLOADS_DIR = ROOT_DIR / "uploads"
 UPLOADS_DIR.mkdir(exist_ok=True)
 
 # API Keys from environment
-OPENWEATHER_API_KEY = os.environ.get('OPENWEATHER_API_KEY', '')
+WEATHERAPI_KEY = os.environ.get('WEATHERAPI_KEY', '')
 NEWS_API_KEY = os.environ.get('NEWS_API_KEY', '')
 
 # Configure logging
@@ -123,6 +123,8 @@ class WeatherData(BaseModel):
     uv_index: int = 0
     air_quality: int = 50
     is_fallback: bool = False
+    feels_like: float = 0
+    precipitation: float = 0
 
 class ForecastDay(BaseModel):
     day: str
@@ -396,79 +398,115 @@ async def reset_to_defaults():
     await db.images.delete_many({})
     return {"message": "Images reset to defaults"}
 
-# ===== Weather Endpoint =====
+# ===== Weather Provider: WeatherAPI.com =====
+# Maps WeatherAPI condition codes to OpenWeatherMap icon codes for frontend theme compatibility.
+# See https://www.weatherapi.com/docs/weather_conditions.json
+
+def _weatherapi_to_owm_icon(condition_code: int, is_day: bool) -> str:
+    suffix = "d" if is_day else "n"
+    clear = {1000}
+    partly = {1003}
+    cloudy = {1006}
+    overcast = {1009}
+    fog = {1030, 1135, 1147}
+    thunder = {1087, 1273, 1276, 1279, 1282}
+    snow = {1066, 1069, 1072, 1114, 1117, 1204, 1207, 1210, 1213, 1216, 1219, 1222, 1225, 1237, 1249, 1252, 1255, 1258, 1261, 1264}
+    heavy_rain = {1192, 1195, 1201, 1243, 1246}
+    light_rain = {1063, 1150, 1153, 1168, 1171, 1180, 1183, 1186, 1189, 1198, 1240}
+
+    if condition_code in clear:
+        return f"01{suffix}"
+    if condition_code in partly:
+        return f"02{suffix}"
+    if condition_code in cloudy:
+        return f"03{suffix}"
+    if condition_code in overcast:
+        return f"04{suffix}"
+    if condition_code in fog:
+        return f"50{suffix}"
+    if condition_code in thunder:
+        return f"11{suffix}"
+    if condition_code in snow:
+        return f"13{suffix}"
+    if condition_code in heavy_rain:
+        return f"09{suffix}"
+    if condition_code in light_rain:
+        return f"10{suffix}"
+    return f"02{suffix}"
+
 
 @api_router.get("/weather", response_model=WeatherData)
 async def get_weather(city: Optional[str] = None):
-    """Get current weather for the hotel location"""
+    """Get current weather via WeatherAPI.com"""
     global weather_cache
-    
-    # Get city from settings if not provided
+
     if not city:
         settings = await db.settings.find_one({"id": "hotel_settings"}, {"_id": 0})
         city = settings.get("city", "Clifton, Texas") if settings else "Clifton, Texas"
-    
-    # Check cache (15 minute expiry)
+
     now = datetime.now(timezone.utc)
     if weather_cache["data"] and weather_cache["timestamp"]:
         cache_age = (now - weather_cache["timestamp"]).total_seconds()
-        if cache_age < 900:  # 15 minutes
+        if cache_age < 900:
             logger.info("Returning cached weather data")
             return WeatherData(**weather_cache["data"])
-    
-    # Try to fetch from OpenWeatherMap
-    if not OPENWEATHER_API_KEY:
-        logger.warning("No OpenWeatherMap API key configured, using fallback")
+
+    if not WEATHERAPI_KEY:
+        logger.warning("No WeatherAPI key configured, using fallback")
         fallback = FALLBACK_WEATHER.copy()
         fallback["city"] = city
         return WeatherData(**fallback)
-    
+
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.get(
-                "https://api.openweathermap.org/data/2.5/weather",
-                params={
-                    "q": city,
-                    "appid": OPENWEATHER_API_KEY,
-                    "units": "imperial"
-                }
+        async with httpx.AsyncClient(timeout=10.0) as http:
+            response = await http.get(
+                "https://api.weatherapi.com/v1/forecast.json",
+                params={"key": WEATHERAPI_KEY, "q": city, "days": 1, "aqi": "no"}
             )
-            
+
             if response.status_code == 200:
                 data = response.json()
-                # Convert Unix timestamps to readable time
-                sunrise_ts = data.get("sys", {}).get("sunrise", 0)
-                sunset_ts = data.get("sys", {}).get("sunset", 0)
-                sunrise_time = datetime.fromtimestamp(sunrise_ts).strftime("%I:%M %p") if sunrise_ts else "6:00 AM"
-                sunset_time = datetime.fromtimestamp(sunset_ts).strftime("%I:%M %p") if sunset_ts else "6:00 PM"
-                
+                cur = data["current"]
+                loc = data["location"]
+                astro = data["forecast"]["forecastday"][0].get("astro", {})
+                day_data = data["forecast"]["forecastday"][0]["day"]
+                is_day = bool(cur.get("is_day", 1))
+                code = cur["condition"]["code"]
+
                 weather_data = {
-                    "temp": round(data["main"]["temp"]),
-                    "temp_min": round(data["main"]["temp_min"]),
-                    "temp_max": round(data["main"]["temp_max"]),
-                    "condition": data["weather"][0]["description"].title(),
-                    "icon": data["weather"][0]["icon"],
-                    "city": data["name"],
-                    "humidity": data["main"].get("humidity", 50),
-                    "wind_speed": round(data.get("wind", {}).get("speed", 0), 1),
-                    "visibility": round(data.get("visibility", 10000) / 1000, 1),
-                    "sunrise": sunrise_time,
-                    "sunset": sunset_time,
-                    "uv_index": 5,  # UV index requires separate API call
-                    "air_quality": 42,  # Air quality requires separate API call
-                    "is_fallback": False
+                    "temp": round(cur["temp_f"]),
+                    "temp_min": round(day_data["mintemp_f"]),
+                    "temp_max": round(day_data["maxtemp_f"]),
+                    "condition": cur["condition"]["text"],
+                    "icon": _weatherapi_to_owm_icon(code, is_day),
+                    "city": loc["name"],
+                    "humidity": cur.get("humidity", 50),
+                    "wind_speed": round(cur.get("wind_mph", 0), 1),
+                    "visibility": round(cur.get("vis_miles", 10), 1),
+                    "sunrise": astro.get("sunrise", "6:00 AM"),
+                    "sunset": astro.get("sunset", "6:00 PM"),
+                    "uv_index": int(cur.get("uv", 0)),
+                    "air_quality": 42,
+                    "is_fallback": False,
+                    "feels_like": round(cur.get("feelslike_f", cur["temp_f"])),
+                    "precipitation": round(cur.get("precip_in", 0), 2),
                 }
                 weather_cache["data"] = weather_data
                 weather_cache["timestamp"] = now
-                logger.info(f"Weather fetched successfully for {city}")
+                logger.info(f"Weather fetched from WeatherAPI.com for {loc['name']}")
                 return WeatherData(**weather_data)
             else:
-                logger.error(f"Weather API error: {response.status_code}")
-                raise HTTPException(status_code=response.status_code, detail="Weather API error")
-                
-    except httpx.RequestError as e:
+                body = response.text
+                logger.error(f"WeatherAPI error {response.status_code}: {body}")
+                if weather_cache["data"]:
+                    weather_cache["data"]["is_fallback"] = True
+                    return WeatherData(**weather_cache["data"])
+                fallback = FALLBACK_WEATHER.copy()
+                fallback["city"] = city
+                return WeatherData(**fallback)
+
+    except Exception as e:
         logger.error(f"Weather request failed: {e}")
-        # Return cached data if available, otherwise fallback
         if weather_cache["data"]:
             weather_cache["data"]["is_fallback"] = True
             return WeatherData(**weather_cache["data"])
@@ -476,84 +514,111 @@ async def get_weather(city: Optional[str] = None):
         fallback["city"] = city
         return WeatherData(**fallback)
 
+
 @api_router.get("/weather/extended", response_model=ExtendedWeatherData)
 async def get_extended_weather(city: Optional[str] = None):
-    """Get extended weather including forecast"""
-    # Get current weather
-    current = await get_weather(city)
-    
-    # Get city from settings if not provided
+    """Get current weather + multi-day forecast via WeatherAPI.com"""
     if not city:
         settings = await db.settings.find_one({"id": "hotel_settings"}, {"_id": 0})
         city = settings.get("city", "Clifton, Texas") if settings else "Clifton, Texas"
-    
-    forecast = []
-    hourly = []
-    
-    if not OPENWEATHER_API_KEY:
-        # Return fallback forecast
+
+    if not WEATHERAPI_KEY:
+        current = await get_weather(city)
         return ExtendedWeatherData(
             current=current,
             forecast=[ForecastDay(**f) for f in FALLBACK_FORECAST],
             hourly=[]
         )
-    
+
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            # Get 5-day forecast
-            response = await client.get(
-                "https://api.openweathermap.org/data/2.5/forecast",
-                params={
-                    "q": city,
-                    "appid": OPENWEATHER_API_KEY,
-                    "units": "imperial"
-                }
+        async with httpx.AsyncClient(timeout=10.0) as http:
+            response = await http.get(
+                "https://api.weatherapi.com/v1/forecast.json",
+                params={"key": WEATHERAPI_KEY, "q": city, "days": 7, "aqi": "no"}
             )
-            
-            if response.status_code == 200:
-                data = response.json()
-                
-                # Process hourly data (next 24 hours, every 3 hours)
-                for item in data.get("list", [])[:8]:
-                    dt = datetime.fromtimestamp(item["dt"])
+
+            if response.status_code != 200:
+                logger.error(f"WeatherAPI forecast error: {response.status_code}")
+                current = await get_weather(city)
+                return ExtendedWeatherData(
+                    current=current,
+                    forecast=[ForecastDay(**f) for f in FALLBACK_FORECAST],
+                    hourly=[]
+                )
+
+            data = response.json()
+            cur = data["current"]
+            loc = data["location"]
+            forecast_days_raw = data.get("forecast", {}).get("forecastday", [])
+
+            # Build current weather
+            is_day = bool(cur.get("is_day", 1))
+            code = cur["condition"]["code"]
+            astro_today = forecast_days_raw[0].get("astro", {}) if forecast_days_raw else {}
+            day_today = forecast_days_raw[0]["day"] if forecast_days_raw else {}
+
+            current_data = WeatherData(
+                temp=round(cur["temp_f"]),
+                temp_min=round(day_today.get("mintemp_f", cur["temp_f"])),
+                temp_max=round(day_today.get("maxtemp_f", cur["temp_f"])),
+                condition=cur["condition"]["text"],
+                icon=_weatherapi_to_owm_icon(code, is_day),
+                city=loc["name"],
+                humidity=cur.get("humidity", 50),
+                wind_speed=round(cur.get("wind_mph", 0), 1),
+                visibility=round(cur.get("vis_miles", 10), 1),
+                sunrise=astro_today.get("sunrise", "6:00 AM"),
+                sunset=astro_today.get("sunset", "6:00 PM"),
+                uv_index=int(cur.get("uv", 0)),
+                air_quality=42,
+                is_fallback=False,
+                feels_like=round(cur.get("feelslike_f", cur["temp_f"])),
+                precipitation=round(cur.get("precip_in", 0), 2),
+            )
+
+            # Update cache
+            weather_cache["data"] = current_data.model_dump()
+            weather_cache["timestamp"] = datetime.now(timezone.utc)
+
+            # Build forecast list (skip today — frontend prepends "Today" from current)
+            forecast = []
+            for fd in forecast_days_raw[1:7]:
+                d = fd["day"]
+                fc_code = d["condition"]["code"]
+                dt = datetime.strptime(fd["date"], "%Y-%m-%d")
+                forecast.append(ForecastDay(
+                    day=dt.strftime("%A"),
+                    temp_min=round(d["mintemp_f"]),
+                    temp_max=round(d["maxtemp_f"]),
+                    condition=d["condition"]["text"],
+                    icon=_weatherapi_to_owm_icon(fc_code, True),
+                ))
+
+            # Build hourly (next 24 hours from today's hours)
+            hourly = []
+            if forecast_days_raw:
+                for h in forecast_days_raw[0].get("hour", [])[:24]:
+                    dt_h = datetime.strptime(h["time"], "%Y-%m-%d %H:%M")
                     hourly.append({
-                        "time": dt.strftime("%I %p"),
-                        "temp": round(item["main"]["temp"])
+                        "time": dt_h.strftime("%I %p"),
+                        "temp": round(h["temp_f"])
                     })
-                
-                # Process daily forecast (group by day)
-                daily_data = {}
-                for item in data.get("list", []):
-                    dt = datetime.fromtimestamp(item["dt"])
-                    day_name = dt.strftime("%A")
-                    if day_name not in daily_data:
-                        daily_data[day_name] = {
-                            "day": day_name,
-                            "temps": [],
-                            "condition": item["weather"][0]["description"].title(),
-                            "icon": item["weather"][0]["icon"]
-                        }
-                    daily_data[day_name]["temps"].append(item["main"]["temp"])
-                
-                # Calculate min/max for each day
-                for day_name, day_info in list(daily_data.items())[:7]:
-                    forecast.append(ForecastDay(
-                        day=day_name,
-                        temp_min=round(min(day_info["temps"])),
-                        temp_max=round(max(day_info["temps"])),
-                        condition=day_info["condition"],
-                        icon=day_info["icon"]
-                    ))
-                    
+
+            return ExtendedWeatherData(
+                current=current_data,
+                forecast=forecast if forecast else [ForecastDay(**f) for f in FALLBACK_FORECAST],
+                hourly=hourly
+            )
+
     except Exception as e:
-        logger.error(f"Forecast fetch failed: {e}")
-        forecast = [ForecastDay(**f) for f in FALLBACK_FORECAST]
-    
-    return ExtendedWeatherData(
-        current=current,
-        forecast=forecast if forecast else [ForecastDay(**f) for f in FALLBACK_FORECAST],
-        hourly=hourly
-    )
+        logger.error(f"Extended weather fetch failed: {e}")
+        current = await get_weather(city)
+        return ExtendedWeatherData(
+            current=current,
+            forecast=[ForecastDay(**f) for f in FALLBACK_FORECAST],
+            hourly=[]
+        )
+
 
 # ===== News Endpoint =====
 
@@ -840,7 +905,8 @@ async def root():
 async def health_check():
     return {
         "status": "healthy",
-        "weather_api_configured": bool(OPENWEATHER_API_KEY),
+        "weather_provider": "WeatherAPI.com",
+        "weather_api_configured": bool(WEATHERAPI_KEY),
         "news_api_configured": bool(NEWS_API_KEY)
     }
 
