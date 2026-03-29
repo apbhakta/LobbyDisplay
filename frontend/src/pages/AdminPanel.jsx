@@ -56,7 +56,7 @@ import {
   Type,
   EyeOff
 } from "lucide-react";
-import WidgetPositionPanel from "../components/admin/WidgetPositionPanel";
+import WidgetPositionPanel, { DEFAULT_POSITIONS_LANDSCAPE, DEFAULT_POSITIONS_PORTRAIT } from "../components/admin/WidgetPositionPanel";
 import AttractionsTab from "../components/admin/AttractionsTab";
 import OverlaysTab from "../components/admin/OverlaysTab";
 import VideosTab from "../components/admin/VideosTab";
@@ -683,12 +683,14 @@ function AdminDashboard({ navigate, user, onLogout, showPasswordChange, setShowP
       setSettings(prev => ({ ...prev, aspect_ratio: "custom" }));
       return;
     }
+    const newPositions = preset.orientation === "portrait" ? DEFAULT_POSITIONS_PORTRAIT : DEFAULT_POSITIONS_LANDSCAPE;
     setSettings(prev => ({
       ...prev,
       aspect_ratio: preset.value,
       display_orientation: preset.orientation,
       display_width: preset.w,
       display_height: preset.h,
+      widget_positions: newPositions,
     }));
   };
 
@@ -697,6 +699,7 @@ function AdminDashboard({ navigate, user, onLogout, showPasswordChange, setShowP
     const w = settings.display_width;
     const h = settings.display_height;
     const isFlipping = (orientation === "portrait" && w > h) || (orientation === "landscape" && h > w);
+    const newPositions = orientation === "portrait" ? DEFAULT_POSITIONS_PORTRAIT : DEFAULT_POSITIONS_LANDSCAPE;
     
     if (isFlipping) {
       const ratioMap = { "16:9": "9:16", "9:16": "16:9", "4:3": "3:4", "3:4": "4:3" };
@@ -706,9 +709,10 @@ function AdminDashboard({ navigate, user, onLogout, showPasswordChange, setShowP
         display_width: h,
         display_height: w,
         aspect_ratio: ratioMap[prev.aspect_ratio] || "custom",
+        widget_positions: newPositions,
       }));
     } else {
-      setSettings(prev => ({ ...prev, display_orientation: orientation }));
+      setSettings(prev => ({ ...prev, display_orientation: orientation, widget_positions: newPositions }));
     }
   };
 

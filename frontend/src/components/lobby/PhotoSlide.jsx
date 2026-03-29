@@ -54,12 +54,10 @@ export default function PhotoSlide({
   // x <= 50: left-anchored, x > 50: right-anchored
   // y <= 50: top-anchored, y > 50: bottom-anchored
   // This ensures old grid values (0/100) AND free-form values both work
-  const defaultPos = {
-    logo: { x: 0, y: 0 },
-    clock: { x: 100, y: 0 },
-    weather: { x: 0, y: 100 },
-    news: { x: 100, y: 100 },
-  };
+  // Orientation-aware defaults: portrait stacks vertically, landscape uses corners
+  const defaultPos = isPortrait
+    ? { logo: { x: 50, y: 3 }, clock: { x: 50, y: 10 }, weather: { x: 50, y: 82 }, news: { x: 50, y: 93 } }
+    : { logo: { x: 0, y: 0 }, clock: { x: 100, y: 0 }, weather: { x: 0, y: 100 }, news: { x: 100, y: 100 } };
   const raw = settings.widget_positions || {};
   const positions = {
     logo: raw.logo || defaultPos.logo,
@@ -103,12 +101,12 @@ export default function PhotoSlide({
       </div>
 
       {/* Positioned widgets */}
-      <div className="absolute inset-0 z-[3]" style={{ padding }}>
+      <div className="absolute inset-0 z-[3]" style={{ padding: isPortrait ? Math.min(padding, 24) : padding }}>
         {/* Logo */}
         {visibility.logo && settings.logo_url && (
           <motion.div
             className="absolute"
-            style={anchorStyle(positions.logo)}
+            style={{ ...anchorStyle(positions.logo), ...(isPortrait && positions.logo.x > 25 && positions.logo.x < 75 ? { left: '50%', right: 'auto', transform: 'translateX(-50%)' } : {}) }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.8 }}
@@ -127,7 +125,11 @@ export default function PhotoSlide({
         {visibility.clock && (
           <motion.div
             className="absolute"
-            style={{ ...anchorStyle(positions.clock), textAlign: positions.clock.x > 50 ? 'right' : 'left' }}
+            style={{
+              ...anchorStyle(positions.clock),
+              textAlign: isPortrait && positions.clock.x > 25 && positions.clock.x < 75 ? 'center' : (positions.clock.x > 50 ? 'right' : 'left'),
+              ...(isPortrait && positions.clock.x > 25 && positions.clock.x < 75 ? { left: '50%', right: 'auto', transform: 'translateX(-50%)' } : {}),
+            }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.8, delay: 0.1 }}
@@ -141,7 +143,14 @@ export default function PhotoSlide({
         {visibility.weather && (
           <motion.div
             className="absolute overflow-hidden"
-            style={{ ...anchorStyle(positions.weather), maxWidth: isPortrait ? '48%' : '45%', maxHeight: '30%', transform: `scale(${wScale})`, transformOrigin: `${positions.weather.x <= 50 ? 'left' : 'right'} ${positions.weather.y <= 50 ? 'top' : 'bottom'}` }}
+            style={{
+              ...anchorStyle(positions.weather),
+              maxWidth: isPortrait ? '90%' : '45%',
+              maxHeight: '30%',
+              transform: `scale(${wScale})`,
+              transformOrigin: `${positions.weather.x <= 50 ? 'left' : 'right'} ${positions.weather.y <= 50 ? 'top' : 'bottom'}`,
+              ...(isPortrait && positions.weather.x > 25 && positions.weather.x < 75 ? { left: '50%', right: 'auto', transform: `scale(${wScale}) translateX(-50%)`, transformOrigin: 'center top' } : {}),
+            }}
             initial={{ opacity: 0, y: positions.weather.y <= 50 ? -20 : 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
@@ -154,7 +163,14 @@ export default function PhotoSlide({
         {visibility.news && (
           <motion.div
             className="absolute overflow-hidden"
-            style={{ ...anchorStyle(positions.news), maxWidth: isPortrait ? '48%' : '45%', maxHeight: '18%', transform: `scale(${wScale})`, transformOrigin: `${positions.news.x <= 50 ? 'left' : 'right'} ${positions.news.y <= 50 ? 'top' : 'bottom'}` }}
+            style={{
+              ...anchorStyle(positions.news),
+              maxWidth: isPortrait ? '90%' : '45%',
+              maxHeight: '18%',
+              transform: `scale(${wScale})`,
+              transformOrigin: `${positions.news.x <= 50 ? 'left' : 'right'} ${positions.news.y <= 50 ? 'top' : 'bottom'}`,
+              ...(isPortrait && positions.news.x > 25 && positions.news.x < 75 ? { left: '50%', right: 'auto', transform: `scale(${wScale}) translateX(-50%)`, transformOrigin: 'center top' } : {}),
+            }}
             initial={{ opacity: 0, y: positions.news.y <= 50 ? -20 : 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.4 }}

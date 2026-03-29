@@ -1,12 +1,20 @@
 import { useState, useRef, useCallback, useMemo } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../../components/ui/card";
-import { Maximize2, Image as ImageIcon } from "lucide-react";
+import { Button } from "../../components/ui/button";
+import { Maximize2, Image as ImageIcon, RotateCcw } from "lucide-react";
 
-const DEFAULT_POSITIONS = {
-  logo: { x: 3, y: 3 },
-  clock: { x: 85, y: 3 },
-  weather: { x: 3, y: 80 },
-  news: { x: 55, y: 85 },
+export const DEFAULT_POSITIONS_LANDSCAPE = {
+  logo: { x: 3, y: 5 },
+  clock: { x: 97, y: 5 },
+  weather: { x: 3, y: 90 },
+  news: { x: 97, y: 90 },
+};
+
+export const DEFAULT_POSITIONS_PORTRAIT = {
+  logo: { x: 50, y: 3 },
+  clock: { x: 50, y: 10 },
+  weather: { x: 50, y: 82 },
+  news: { x: 50, y: 93 },
 };
 
 const WIDGETS = [
@@ -22,7 +30,16 @@ export default function WidgetPositionPanel({ settings, setSettings, onSave }) {
   // Local drag state for smooth movement — no API calls during drag
   const [dragPositions, setDragPositions] = useState(null);
 
-  const savedPositions = useMemo(() => ({ ...DEFAULT_POSITIONS, ...settings.widget_positions }), [settings.widget_positions]);
+  const isPortrait = settings.display_orientation === "portrait";
+  const defaultPositions = isPortrait ? DEFAULT_POSITIONS_PORTRAIT : DEFAULT_POSITIONS_LANDSCAPE;
+  // Compute actual aspect ratio from settings dimensions
+  const canvasAspect = (() => {
+    const w = parseFloat(settings.display_width) || 16;
+    const h = parseFloat(settings.display_height) || 9;
+    return `${w}/${h}`;
+  })();
+
+  const savedPositions = useMemo(() => ({ ...defaultPositions, ...settings.widget_positions }), [settings.widget_positions, defaultPositions]);
   const positions = dragPositions || savedPositions;
 
   const handleMouseDown = (e, key) => {
@@ -88,7 +105,7 @@ export default function WidgetPositionPanel({ settings, setSettings, onSave }) {
           ref={canvasRef}
           className="relative rounded-xl border border-white/20 overflow-hidden select-none"
           style={{
-            aspectRatio: settings.display_orientation === "portrait" ? '3/4' : '16/9',
+            aspectRatio: canvasAspect,
             maxHeight: 360,
             background: 'linear-gradient(180deg, #1e293b 0%, #334155 50%, #0f172a 100%)',
             cursor: dragging ? 'grabbing' : 'default',
@@ -118,7 +135,7 @@ export default function WidgetPositionPanel({ settings, setSettings, onSave }) {
 
           {/* Draggable widgets — always use left/top on canvas for smooth drag */}
           {WIDGETS.map(w => {
-            const pos = positions[w.key] || DEFAULT_POSITIONS[w.key];
+            const pos = positions[w.key] || defaultPositions[w.key];
             const isDragging = dragging === w.key;
             return (
               <div
@@ -147,9 +164,28 @@ export default function WidgetPositionPanel({ settings, setSettings, onSave }) {
           })}
         </div>
 
-        <p className="text-xs text-muted-foreground text-center">
-          Drag any widget to reposition it. Changes save when you release.
-        </p>
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-muted-foreground">
+            Drag any widget to reposition it. Changes save when you release.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 text-xs"
+            onClick={() => {
+              const defaults = isPortrait ? DEFAULT_POSITIONS_PORTRAIT : DEFAULT_POSITIONS_LANDSCAPE;
+              setSettings(prev => {
+                const updated = { ...prev, widget_positions: { ...defaults } };
+                if (onSave) setTimeout(() => onSave(updated), 50);
+                return updated;
+              });
+            }}
+            data-testid="reset-widget-positions"
+          >
+            <RotateCcw className="w-3 h-3" />
+            Reset Positions
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );

@@ -16,13 +16,20 @@ const API = `${BACKEND_URL}/api`;
 
 // Logo overlay is now handled inside PhotoSlide via widget_positions
 // For non-photo slides, show logo at its positioned location
-const LogoOverlay = ({ logoUrl, positions, visibility, glassEffect }) => {
+const LogoOverlay = ({ logoUrl, positions, visibility, glassEffect, isPortrait }) => {
   if (!logoUrl) return null;
   if (visibility?.logo === false) return null;
   const pos = positions?.logo || { x: 0, y: 0 };
   const style = {};
-  if (pos.x <= 50) style.left = `${pos.x}%`;
-  else style.right = `${100 - pos.x}%`;
+  const isCentered = isPortrait && pos.x > 25 && pos.x < 75;
+  if (isCentered) {
+    style.left = '50%';
+    style.transform = 'translateX(-50%)';
+  } else if (pos.x <= 50) {
+    style.left = `${pos.x}%`;
+  } else {
+    style.right = `${100 - pos.x}%`;
+  }
   if (pos.y <= 50) style.top = `${pos.y}%`;
   else style.bottom = `${100 - pos.y}%`;
   const glass = glassEffect !== false;
@@ -280,7 +287,7 @@ export default function LobbyDisplay() {
         )}
       </AnimatePresence>
 
-      <LogoOverlay logoUrl={settings.logo_url} positions={settings.widget_positions} visibility={settings.widget_visibility} glassEffect={settings.glass_effect} />
+      <LogoOverlay logoUrl={settings.logo_url} positions={settings.widget_positions} visibility={settings.widget_visibility} glassEffect={settings.glass_effect} isPortrait={isPortrait} />
       <SlideIndicators slides={slides} currentSlideIndex={currentSlideIndex} />
       <OverlayDisplay overlays={activeOverlays} />
     </div>
