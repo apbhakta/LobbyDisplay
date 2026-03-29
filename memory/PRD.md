@@ -1,58 +1,56 @@
 # Hotel Lobby Digital Signage — Clifton, Texas
 
 ## Problem Statement
-Build a premium fullscreen hotel lobby display web app in Clifton, Texas for a TV screen. Digital signage with rotating hotel photos, live clock/date, WeatherAPI weather, NewsAPI headlines, weather-reactive animated backgrounds, 6-day forecast weather slide, local attractions, local events, content announcements, overlays, and comprehensive admin panel with authentication.
+Build a premium fullscreen hotel lobby display web app in Clifton, Texas for a TV screen. Digital signage with rotating hotel photos, live clock/date, WeatherAPI weather, NewsAPI headlines, weather-reactive animated backgrounds, 6-day forecast weather slide, local attractions, local events, video commercials, content announcements, overlays, and comprehensive admin panel with authentication.
 
 ## Architecture
 - Frontend: React + TailwindCSS + framer-motion + shadcn/ui
 - Backend: FastAPI + MongoDB + httpx
 - Weather: WeatherAPI.com
 - News: NewsAPI.org
-- Image Storage: Cloudinary
+- Image/Video Storage: Cloudinary
 - Auth: JWT + bcrypt
 
 ## Completed Features
 
-### Core Lobby Display
-- [x] 4 slide types rotation: Photo, Weather, Attractions, Events
-- [x] Weather-reactive animated backgrounds (8 themes)
-- [x] Live clock and date
-- [x] Fullscreen weather slide with 6-day forecast
-- [x] Glassmorphism weather widget, news headline
+### Core Lobby Display (5 slide types)
+- [x] Photo slides — rotating hotel images with glassmorphism widgets
+- [x] Weather slide — fullscreen 6-day forecast with weather-reactive backgrounds
+- [x] Attractions slide — local attractions with categories
+- [x] Events slide — local events with rich fields
+- [x] Video slide — fullscreen video/commercial playback (NEW)
 - [x] Hotel logo overlay on every slide (top-left)
+- [x] Live clock and date
 
-### Phase 1-4: Display, Content, Widgets, Events (Completed)
-### Phase 5: UI Redesign (Completed Feb 2026)
-### Phase 6: WeatherAPI.com Migration (Completed Feb 2026)
-### Phase 7: Portrait 4:3 Default Display (Completed Feb 2026)
-### Phase 8: Widget Positioning, Refactoring & Overlays (Completed Feb 2026)
-### Phase 9: Admin Authentication (Completed Feb 2026)
-
-### Phase 10: Cloudinary Migration & Cleanup (Completed Mar 2026)
-- [x] Migrated all image uploads from local disk to Cloudinary
-- [x] Hotel images: `hotel_lobby/images`, Event images: `hotel_lobby/events`, Logo: `hotel_lobby/logo`
-- [x] `cloudinary_public_id` stored in DB for proper deletion
-- [x] Migration endpoint `POST /api/images/migrate-to-cloud`
-- [x] Removed "Made with Emergent" watermark from index.html
+### Phase 10: Cloudinary Migration (Completed Mar 2026)
+- [x] All images (hotel, events, logo) and videos stored on Cloudinary
+- [x] Migration endpoint for legacy local images
 
 ### Phase 11: Hotel Logo & Widget Fix (Completed Mar 2026)
-- [x] Hotel logo upload via admin Settings tab (Cloudinary-backed)
-- [x] Logo displays top-left on every slide type (photo, weather, attractions, events)
-- [x] Logo upload, replace, and delete functionality
-- [x] `POST /api/settings/logo` and `DELETE /api/settings/logo` endpoints
-- [x] Widget positioning auto-save (positions save immediately when changed, no manual save needed)
+- [x] Hotel logo upload/replace/delete in admin Settings
+- [x] Logo renders top-left on every slide
+- [x] Widget positioning auto-saves
 
-### Admin Panel (6 tabs)
-- Images: Upload to Cloudinary, drag-reorder, delete, reset
-- Attractions: Full CRUD with categories, enable/disable
-- Events: Full CRUD with rich fields, featured/expired, image upload to Cloudinary
-- Content: 7 section types with CRUD
-- Settings: Hotel info, logo upload, news category, timing
-- Display: Aspect ratios, orientation, widget positioning (auto-save), widget sizing
+### Phase 12: Video/Commercial System (Completed Mar 2026)
+- [x] Full video CRUD: create, read, update, delete
+- [x] Cloudinary video upload (`hotel_lobby/videos`)
+- [x] Cloudinary thumbnail upload (`hotel_lobby/video_thumbnails`)
+- [x] Video entry fields: title, description, start_date, end_date, active, featured, mute, autoplay, loop, show_controls, frequency, order
+- [x] Scheduling: start_date/end_date with auto-detection of expired/scheduled status
+- [x] Frequency control: video appears every N rotation cycles
+- [x] Playback: fullscreen, muted autoplay default, auto-advance on end, graceful error skip
+- [x] No widgets overlaid on video slides (clean commercial playback)
+- [x] Admin Videos tab: add/edit/upload/thumbnail/toggle/delete/reorder
+- [x] Reorder endpoint for manual sort control
+- [x] Videos inserted between other slide types in lobby rotation
+
+### Admin Panel (8 tabs)
+- Images, Attractions, Events, Content, Settings, Display, Overlays, Videos
 
 ## DB Schema
-- `settings`: hotel_name, city, logo_url, logo_cloudinary_id, news_category, photo_interval, weather_slide_duration, aspect_ratio, display_orientation, widget_positions, widget_scale, font_scale, etc.
+- `settings`: hotel_name, city, logo_url, logo_cloudinary_id, news_category, photo_interval, weather_slide_duration, widget_positions, widget_scale, font_scale, etc.
 - `images`: id, filename, url (Cloudinary), cloudinary_public_id, uploaded_at
+- `videos`: id, title, description, video_url, video_cloudinary_id, thumbnail_url, thumbnail_cloudinary_id, start_date, end_date, active, featured, mute, autoplay, loop, show_controls, order, frequency, created_at
 - `attractions`: id, name, description, distance, category, image_url, enabled, order
 - `local_events`: id, title, description, event_date, start_time, end_time, location, address, category, image_url, cloudinary_public_id, etc.
 - `content`: id, section_type, title, content, enabled, order, priority, icon
@@ -63,6 +61,7 @@ Build a premium fullscreen hotel lobby display web app in Clifton, Texas for a T
 - Auth: POST /api/auth/login, GET /api/auth/me, POST /api/auth/logout, POST /api/auth/change-password
 - Settings: GET/PUT /api/settings, POST /api/settings/logo, DELETE /api/settings/logo
 - Images: GET/POST /api/images, DELETE /api/images/{id}, POST /api/images/migrate-to-cloud
+- Videos: GET/POST /api/videos, PUT/DELETE /api/videos/{id}, POST /api/videos/{id}/upload, POST /api/videos/{id}/thumbnail, POST /api/videos/reorder
 - Attractions: GET/POST /api/attractions, PUT/DELETE /api/attractions/{id}, POST /api/attractions/reorder
 - Events: GET/POST /api/events, PUT/DELETE /api/events/{id}, POST /api/events/reorder, POST /api/events/{id}/image
 - Content: GET/POST /api/content/{type}, PUT/DELETE /api/content/{type}/{id}
@@ -75,5 +74,5 @@ Build a premium fullscreen hotel lobby display web app in Clifton, Texas for a T
 
 ## P2 Backlog
 - Content sections integration into lobby display slides
-- Full free-form drag widget positioning (pixel-level, not grid-based)
-- Refactor AdminPanel.jsx into smaller sub-components (2700+ lines)
+- Full free-form drag widget positioning (pixel-level)
+- Refactor AdminPanel.jsx into smaller sub-components (2900+ lines)
