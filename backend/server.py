@@ -149,6 +149,7 @@ class Settings(BaseModel):
     logo_url: str = ""
 
 class SettingsUpdate(BaseModel):
+    model_config = ConfigDict(extra="ignore")
     hotel_name: Optional[str] = None
     city: Optional[str] = None
     news_category: Optional[str] = None
