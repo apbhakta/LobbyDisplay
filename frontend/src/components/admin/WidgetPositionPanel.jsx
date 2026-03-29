@@ -19,45 +19,49 @@ const WIDGETS = [
 export default function WidgetPositionPanel({ settings, setSettings, onSave }) {
   const canvasRef = useRef(null);
   const [dragging, setDragging] = useState(null);
+  // Local drag state for smooth movement — no API calls during drag
+  const [dragPositions, setDragPositions] = useState(null);
 
-  const positions = useMemo(() => ({ ...DEFAULT_POSITIONS, ...settings.widget_positions }), [settings.widget_positions]);
-
-  const updatePosition = useCallback((key, x, y) => {
-    const clamped = { x: Math.max(0, Math.min(95, x)), y: Math.max(0, Math.min(95, y)) };
-    setSettings(prev => {
-      const newPositions = { ...DEFAULT_POSITIONS, ...prev.widget_positions, [key]: clamped };
-      const updated = { ...prev, widget_positions: newPositions };
-      if (onSave) setTimeout(() => onSave(updated), 100);
-      return updated;
-    });
-  }, [setSettings, onSave]);
+  const savedPositions = useMemo(() => ({ ...DEFAULT_POSITIONS, ...settings.widget_positions }), [settings.widget_positions]);
+  const positions = dragPositions || savedPositions;
 
   const handleMouseDown = (e, key) => {
     e.preventDefault();
     e.stopPropagation();
     setDragging(key);
+    setDragPositions({ ...savedPositions });
   };
 
   const handleMouseMove = useCallback((e) => {
     if (!dragging || !canvasRef.current) return;
     const rect = canvasRef.current.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
-    updatePosition(dragging, x, y);
-  }, [dragging, updatePosition]);
+    const x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+    const y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
+    setDragPositions(prev => prev ? { ...prev, [dragging]: { x, y } } : null);
+  }, [dragging]);
 
   const handleMouseUp = useCallback(() => {
+    if (dragging && dragPositions) {
+      // Save final position to settings + backend
+      const finalPositions = { ...dragPositions };
+      setSettings(prev => {
+        const updated = { ...prev, widget_positions: finalPositions };
+        if (onSave) setTimeout(() => onSave(updated), 50);
+        return updated;
+      });
+    }
     setDragging(null);
-  }, []);
+    setDragPositions(null);
+  }, [dragging, dragPositions, setSettings, onSave]);
 
   const handleTouchMove = useCallback((e) => {
     if (!dragging || !canvasRef.current) return;
     const touch = e.touches[0];
     const rect = canvasRef.current.getBoundingClientRect();
-    const x = ((touch.clientX - rect.left) / rect.width) * 100;
-    const y = ((touch.clientY - rect.top) / rect.height) * 100;
-    updatePosition(dragging, x, y);
-  }, [dragging, updatePosition]);
+    const x = Math.max(0, Math.min(100, ((touch.clientX - rect.left) / rect.width) * 100));
+    const y = Math.max(0, Math.min(100, ((touch.clientY - rect.top) / rect.height) * 100));
+    setDragPositions(prev => prev ? { ...prev, [dragging]: { x, y } } : null);
+  }, [dragging]);
 
   return (
     <Card className="bg-card border-white/10">
@@ -66,7 +70,7 @@ export default function WidgetPositionPanel({ settings, setSettings, onSave }) {
           <Maximize2 className="w-5 h-5" />
           Widget Positioning
         </CardTitle>
-        <CardDescription>Drag widgets to any position on the preview canvas</CardDescription>
+        <CardDescription>Drag widgets freely to any position. Saves when you release.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Legend */}
@@ -85,7 +89,7 @@ export default function WidgetPositionPanel({ settings, setSettings, onSave }) {
           className="relative rounded-xl border border-white/20 overflow-hidden select-none"
           style={{
             aspectRatio: settings.display_orientation === "portrait" ? '3/4' : '16/9',
-            maxHeight: 320,
+            maxHeight: 360,
             background: 'linear-gradient(180deg, #1e293b 0%, #334155 50%, #0f172a 100%)',
             cursor: dragging ? 'grabbing' : 'default',
             touchAction: 'none',
@@ -99,40 +103,41 @@ export default function WidgetPositionPanel({ settings, setSettings, onSave }) {
         >
           <div className="absolute inset-0 bg-black/20" />
           <div className="absolute inset-0 flex items-center justify-center">
-            <ImageIcon className="w-10 h-10 text-white/8" />
+            <ImageIcon className="w-10 h-10 text-white/[0.08]" />
           </div>
 
-          {/* Grid lines */}
+          {/* Grid guides */}
           <div className="absolute inset-0 pointer-events-none">
-            <div className="absolute left-1/3 top-0 bottom-0 border-l border-white/5" />
-            <div className="absolute left-2/3 top-0 bottom-0 border-l border-white/5" />
-            <div className="absolute top-1/3 left-0 right-0 border-t border-white/5" />
-            <div className="absolute top-2/3 left-0 right-0 border-t border-white/5" />
+            <div className="absolute left-1/4 top-0 bottom-0 border-l border-white/[0.04]" />
+            <div className="absolute left-1/2 top-0 bottom-0 border-l border-dashed border-white/[0.08]" />
+            <div className="absolute left-3/4 top-0 bottom-0 border-l border-white/[0.04]" />
+            <div className="absolute top-1/4 left-0 right-0 border-t border-white/[0.04]" />
+            <div className="absolute top-1/2 left-0 right-0 border-t border-dashed border-white/[0.08]" />
+            <div className="absolute top-3/4 left-0 right-0 border-t border-white/[0.04]" />
           </div>
 
-          {/* Draggable widgets */}
+          {/* Draggable widgets — always use left/top on canvas for smooth drag */}
           {WIDGETS.map(w => {
             const pos = positions[w.key] || DEFAULT_POSITIONS[w.key];
-            const posStyle = {};
-            if (pos.x <= 50) posStyle.left = `${pos.x}%`;
-            else posStyle.right = `${100 - pos.x}%`;
-            if (pos.y <= 50) posStyle.top = `${pos.y}%`;
-            else posStyle.bottom = `${100 - pos.y}%`;
+            const isDragging = dragging === w.key;
             return (
               <div
                 key={w.key}
-                className={`absolute z-10 transition-shadow ${dragging === w.key ? 'ring-2 ring-white/50 shadow-lg' : 'hover:ring-1 hover:ring-white/30'}`}
+                className={`absolute z-10 ${isDragging ? 'ring-2 ring-white/60 shadow-xl scale-110' : 'hover:ring-1 hover:ring-white/30 hover:scale-105'}`}
                 style={{
-                  ...posStyle,
-                  cursor: dragging === w.key ? 'grabbing' : 'grab',
+                  left: `${pos.x}%`,
+                  top: `${pos.y}%`,
+                  transform: 'translate(-50%, -50%)',
+                  cursor: isDragging ? 'grabbing' : 'grab',
                   userSelect: 'none',
+                  transition: isDragging ? 'none' : 'transform 0.15s, box-shadow 0.15s',
                 }}
                 onMouseDown={(e) => handleMouseDown(e, w.key)}
-                onTouchStart={(e) => { e.preventDefault(); setDragging(w.key); }}
+                onTouchStart={(e) => { e.preventDefault(); handleMouseDown(e, w.key); }}
                 data-testid={`widget-drag-${w.key}`}
               >
                 <div
-                  className="text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-md whitespace-nowrap"
+                  className="text-white text-[10px] font-bold px-2.5 py-1 rounded-md shadow-md whitespace-nowrap"
                   style={{ background: w.color }}
                 >
                   {w.label}
@@ -143,7 +148,7 @@ export default function WidgetPositionPanel({ settings, setSettings, onSave }) {
         </div>
 
         <p className="text-xs text-muted-foreground text-center">
-          Drag any widget to reposition it. Changes save automatically.
+          Drag any widget to reposition it. Changes save when you release.
         </p>
       </CardContent>
     </Card>
