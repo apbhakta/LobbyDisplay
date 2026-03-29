@@ -90,7 +90,7 @@ export default function PhotoSlide({
       {/* Positioned widgets */}
       <div className="absolute inset-0 z-[3]" style={{ padding }}>
         {/* Logo */}
-        {settings.logo_url && (
+        {visibility.logo && settings.logo_url && (
           <motion.div
             className="absolute"
             style={anchorStyle(positions.logo)}
@@ -98,58 +98,65 @@ export default function PhotoSlide({
             animate={{ opacity: 1 }}
             transition={{ duration: 0.8 }}
           >
-            <img
-              src={settings.logo_url}
-              alt="Logo"
-              className="h-12 w-auto max-w-[120px] object-contain drop-shadow-lg"
-              style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.5))' }}
-            />
+            {glass ? (
+              <GlassPanel theme={currentTheme} className="p-2">
+                <img src={settings.logo_url} alt="Logo" className="h-10 w-auto max-w-[110px] object-contain" />
+              </GlassPanel>
+            ) : (
+              <img src={settings.logo_url} alt="Logo" className="h-12 w-auto max-w-[120px] object-contain drop-shadow-lg" style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.5))' }} />
+            )}
           </motion.div>
         )}
 
         {/* Clock */}
-        <motion.div
-          className="absolute"
-          style={{ ...anchorStyle(positions.clock), textAlign: positions.clock.x > 50 ? 'right' : 'left' }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.8, delay: 0.1 }}
-        >
-          <LiveClock theme={currentTheme} size={isPortrait ? "compact" : "large"} />
-          <DateDisplay theme={currentTheme} />
-        </motion.div>
+        {visibility.clock && (
+          <motion.div
+            className="absolute"
+            style={{ ...anchorStyle(positions.clock), textAlign: positions.clock.x > 50 ? 'right' : 'left' }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.8, delay: 0.1 }}
+          >
+            <LiveClock theme={currentTheme} size={isPortrait ? "compact" : "large"} format={settings.clock_format || "12h"} clockStyle={settings.clock_style || "digital"} fontStyle={settings.font_style || "modern"} color={colors.clock} glass={glass} />
+            <DateDisplay theme={currentTheme} fontStyle={settings.font_style || "modern"} color={colors.clock} />
+          </motion.div>
+        )}
 
         {/* Weather */}
-        <motion.div
-          className="absolute overflow-hidden"
-          style={{ ...anchorStyle(positions.weather), maxWidth: isPortrait ? '48%' : '45%', maxHeight: '30%', transform: `scale(${wScale})`, transformOrigin: `${positions.weather.x <= 50 ? 'left' : 'right'} ${positions.weather.y <= 50 ? 'top' : 'bottom'}` }}
-          initial={{ opacity: 0, y: positions.weather.y <= 50 ? -20 : 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-        >
-          <WeatherWidget weather={weather} theme={currentTheme} />
-        </motion.div>
+        {visibility.weather && (
+          <motion.div
+            className="absolute overflow-hidden"
+            style={{ ...anchorStyle(positions.weather), maxWidth: isPortrait ? '48%' : '45%', maxHeight: '30%', transform: `scale(${wScale})`, transformOrigin: `${positions.weather.x <= 50 ? 'left' : 'right'} ${positions.weather.y <= 50 ? 'top' : 'bottom'}` }}
+            initial={{ opacity: 0, y: positions.weather.y <= 50 ? -20 : 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+          >
+            <WeatherWidget weather={weather} theme={currentTheme} color={colors.weather} glass={glass} />
+          </motion.div>
+        )}
 
         {/* News */}
-        <motion.div
-          className="absolute overflow-hidden"
-          style={{ ...anchorStyle(positions.news), maxWidth: isPortrait ? '48%' : '45%', maxHeight: '18%', transform: `scale(${wScale})`, transformOrigin: `${positions.news.x <= 50 ? 'left' : 'right'} ${positions.news.y <= 50 ? 'top' : 'bottom'}` }}
-          initial={{ opacity: 0, y: positions.news.y <= 50 ? -20 : 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.4 }}
-        >
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentHeadlineIndex}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.6 }}
-            >
-              <NewsHeadline headline={currentHeadline} theme={currentTheme} />
-            </motion.div>
-          </AnimatePresence>
-        </motion.div>
+        {visibility.news && (
+          <motion.div
+            className="absolute overflow-hidden"
+            style={{ ...anchorStyle(positions.news), maxWidth: isPortrait ? '48%' : '45%', maxHeight: '18%', transform: `scale(${wScale})`, transformOrigin: `${positions.news.x <= 50 ? 'left' : 'right'} ${positions.news.y <= 50 ? 'top' : 'bottom'}` }}
+            initial={{ opacity: 0, y: positions.news.y <= 50 ? -20 : 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+          >
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentHeadlineIndex}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.6 }}
+              >
+                <NewsHeadline headline={currentHeadline} theme={currentTheme} color={colors.news} glass={glass} />
+              </motion.div>
+            </AnimatePresence>
+          </motion.div>
+        )}
       </div>
     </div>
   );

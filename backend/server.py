@@ -147,6 +147,19 @@ class Settings(BaseModel):
         "news": {"x": 100, "y": 100},
     })
     logo_url: str = ""
+    # Widget visibility
+    widget_visibility: dict = Field(default_factory=lambda: {
+        "logo": True, "clock": True, "weather": True, "news": True,
+    })
+    # Widget styling
+    clock_format: str = "12h"  # 12h or 24h
+    clock_style: str = "digital"  # digital, minimal, large
+    font_style: str = "modern"  # modern, classic, mono
+    # Widget colors (individual)
+    widget_colors: dict = Field(default_factory=lambda: {
+        "clock": "#ffffff", "weather": "#ffffff", "news": "#ffffff", "logo_bg": "transparent",
+    })
+    glass_effect: bool = True
 
 class SettingsUpdate(BaseModel):
     model_config = ConfigDict(extra="ignore")
