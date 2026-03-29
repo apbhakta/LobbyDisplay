@@ -207,6 +207,7 @@ export default function LobbyDisplay() {
   useEffect(() => { const i = setInterval(fetchOverlays, 60 * 1000); return () => clearInterval(i); }, [fetchOverlays]);
 
   const currentSlide = slides[currentSlideIndex];
+  const isWeatherSlide = currentSlide?.type === SLIDE_TYPES.WEATHER;
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const currentTime = useMemo(() => new Date(), [currentSlideIndex]);
   const isPortrait = settings.display_orientation === "portrait";
@@ -304,14 +305,16 @@ export default function LobbyDisplay() {
           )}
         </AnimatePresence>
 
-        {/* Gradient overlays for widget readability — visible on ALL slides */}
-        <div className="absolute inset-0 z-[8] pointer-events-none">
-          <div className="absolute top-0 left-0 right-0 h-[12%] bg-gradient-to-b from-black/40 to-transparent" />
-          <div className="absolute bottom-0 left-0 right-0 h-[12%] bg-gradient-to-t from-black/40 to-transparent" />
-        </div>
+        {/* Gradient overlays and widgets — hidden on weather slide (it has its own) */}
+        {!isWeatherSlide && (
+          <>
+            <div className="absolute inset-0 z-[8] pointer-events-none">
+              <div className="absolute top-0 left-0 right-0 h-[12%] bg-gradient-to-b from-black/40 to-transparent" />
+              <div className="absolute bottom-0 left-0 right-0 h-[12%] bg-gradient-to-t from-black/40 to-transparent" />
+            </div>
 
-        {/* Persistent widget overlays — visible on ALL slides, all 4 corners */}
-        <div className="absolute inset-0 z-[9] pointer-events-none" style={{ padding: pad }}>
+            {/* Persistent widget overlays — all 4 corners */}
+            <div className="absolute inset-0 z-[9] pointer-events-none" style={{ padding: pad }}>
           {/* TOP-LEFT: Logo */}
           {visibility.logo && settings.logo_url && (
             <motion.div
@@ -381,6 +384,8 @@ export default function LobbyDisplay() {
             </motion.div>
           )}
         </div>
+          </>
+        )}
 
         <SlideIndicators slides={slides} currentSlideIndex={currentSlideIndex} />
         <OverlayDisplay overlays={activeOverlays} />
