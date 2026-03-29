@@ -183,24 +183,23 @@ export default function LobbyDisplay() {
     setSlides(newSlides);
   }, [images, videos, videoCycleCount, contentSections, settings.photo_interval, settings.weather_slide_duration]);
 
-  // Slide auto-advance (skip timer for video slides — they advance on video end)
-  useEffect(() => {
-    if (slides.length === 0) return;
-    const current = slides[currentSlideIndex];
-    if (current?.type === SLIDE_TYPES.VIDEO) return; // video handles its own advance
-    const duration = current?.duration || 8000;
-    const timer = setTimeout(() => advanceSlide(), duration);
-    return () => clearTimeout(timer);
-  }, [slides, currentSlideIndex]);
-
   const advanceSlide = useCallback(() => {
     setCurrentSlideIndex((prev) => {
       const next = (prev + 1) % slides.length;
-      // Increment cycle count when we loop back to start
       if (next === 0) setVideoCycleCount(c => c + 1);
       return next;
     });
   }, [slides.length]);
+
+  // Slide auto-advance (skip timer for video slides — they advance on video end)
+  useEffect(() => {
+    if (slides.length === 0) return;
+    const current = slides[currentSlideIndex];
+    if (current?.type === SLIDE_TYPES.VIDEO) return;
+    const duration = current?.duration || 8000;
+    const timer = setTimeout(() => advanceSlide(), duration);
+    return () => clearTimeout(timer);
+  }, [slides, currentSlideIndex, advanceSlide]);
 
   // Headline rotation
   useEffect(() => {

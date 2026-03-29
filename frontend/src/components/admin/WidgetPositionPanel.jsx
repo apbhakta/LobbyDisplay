@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useMemo } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../../components/ui/card";
 import { Maximize2, Image as ImageIcon } from "lucide-react";
 
@@ -20,17 +20,17 @@ export default function WidgetPositionPanel({ settings, setSettings, onSave }) {
   const canvasRef = useRef(null);
   const [dragging, setDragging] = useState(null);
 
-  const positions = { ...DEFAULT_POSITIONS, ...settings.widget_positions };
+  const positions = useMemo(() => ({ ...DEFAULT_POSITIONS, ...settings.widget_positions }), [settings.widget_positions]);
 
   const updatePosition = useCallback((key, x, y) => {
     const clamped = { x: Math.max(0, Math.min(95, x)), y: Math.max(0, Math.min(95, y)) };
-    const newPositions = { ...positions, [key]: clamped };
     setSettings(prev => {
+      const newPositions = { ...DEFAULT_POSITIONS, ...prev.widget_positions, [key]: clamped };
       const updated = { ...prev, widget_positions: newPositions };
       if (onSave) setTimeout(() => onSave(updated), 100);
       return updated;
     });
-  }, [positions, setSettings, onSave]);
+  }, [setSettings, onSave]);
 
   const handleMouseDown = (e, key) => {
     e.preventDefault();
