@@ -18,12 +18,16 @@ const API = `${BACKEND_URL}/api`;
 // For non-photo slides, show logo at its positioned location
 const LogoOverlay = ({ logoUrl, positions }) => {
   if (!logoUrl) return null;
-  const raw = positions?.logo || { x: 3, y: 3 };
-  const pos = { x: raw.x >= 95 ? 3 : raw.x, y: raw.y >= 95 ? 3 : raw.y };
+  const pos = positions?.logo || { x: 0, y: 0 };
+  const style = {};
+  if (pos.x <= 50) style.left = `${pos.x}%`;
+  else style.right = `${100 - pos.x}%`;
+  if (pos.y <= 50) style.top = `${pos.y}%`;
+  else style.bottom = `${100 - pos.y}%`;
   return (
     <div
       className="absolute z-[10]"
-      style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
+      style={style}
       data-testid="hotel-logo-overlay"
     >
       <img

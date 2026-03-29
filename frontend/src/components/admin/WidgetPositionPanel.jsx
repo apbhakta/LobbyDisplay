@@ -113,13 +113,17 @@ export default function WidgetPositionPanel({ settings, setSettings, onSave }) {
           {/* Draggable widgets */}
           {WIDGETS.map(w => {
             const pos = positions[w.key] || DEFAULT_POSITIONS[w.key];
+            const posStyle = {};
+            if (pos.x <= 50) posStyle.left = `${pos.x}%`;
+            else posStyle.right = `${100 - pos.x}%`;
+            if (pos.y <= 50) posStyle.top = `${pos.y}%`;
+            else posStyle.bottom = `${100 - pos.y}%`;
             return (
               <div
                 key={w.key}
                 className={`absolute z-10 transition-shadow ${dragging === w.key ? 'ring-2 ring-white/50 shadow-lg' : 'hover:ring-1 hover:ring-white/30'}`}
                 style={{
-                  left: `${pos.x}%`,
-                  top: `${pos.y}%`,
+                  ...posStyle,
                   cursor: dragging === w.key ? 'grabbing' : 'grab',
                   userSelect: 'none',
                 }}

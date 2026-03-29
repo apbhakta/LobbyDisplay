@@ -35,27 +35,31 @@ export default function PhotoSlide({
   const wScale = settings.widget_scale || 1;
   const currentHeadline = headlines[currentHeadlineIndex];
 
-  // Widget positions — continuous percentages (0-95)
-  // Migrate old grid values (100 = off-screen) to safe defaults
-  const migratePos = (pos, fallback) => {
-    if (!pos) return fallback;
-    return {
-      x: pos.x >= 95 ? fallback.x : pos.x,
-      y: pos.y >= 95 ? fallback.y : pos.y,
-    };
-  };
+  // Widget positions — smart anchoring
+  // x <= 50: left-anchored, x > 50: right-anchored
+  // y <= 50: top-anchored, y > 50: bottom-anchored
+  // This ensures old grid values (0/100) AND free-form values both work
   const defaultPos = {
-    logo: { x: 3, y: 3 },
-    clock: { x: 80, y: 3 },
-    weather: { x: 3, y: 78 },
-    news: { x: 50, y: 85 },
+    logo: { x: 0, y: 0 },
+    clock: { x: 100, y: 0 },
+    weather: { x: 0, y: 100 },
+    news: { x: 100, y: 100 },
   };
   const raw = settings.widget_positions || {};
   const positions = {
-    logo: migratePos(raw.logo, defaultPos.logo),
-    clock: migratePos(raw.clock || raw.hotel_name, defaultPos.clock),
-    weather: migratePos(raw.weather, defaultPos.weather),
-    news: migratePos(raw.news, defaultPos.news),
+    logo: raw.logo || defaultPos.logo,
+    clock: raw.clock || raw.hotel_name || defaultPos.clock,
+    weather: raw.weather || defaultPos.weather,
+    news: raw.news || defaultPos.news,
+  };
+
+  const anchorStyle = (pos) => {
+    const style = {};
+    if (pos.x <= 50) style.left = `${pos.x}%`;
+    else style.right = `${100 - pos.x}%`;
+    if (pos.y <= 50) style.top = `${pos.y}%`;
+    else style.bottom = `${100 - pos.y}%`;
+    return style;
   };
 
   return (
@@ -82,13 +86,13 @@ export default function PhotoSlide({
         <div className="absolute top-0 left-0 right-0 h-[15%] bg-gradient-to-b from-black/20 to-transparent" />
       </div>
 
-      {/* Free-positioned widgets */}
+      {/* Positioned widgets */}
       <div className="absolute inset-0 z-[3]" style={{ padding }}>
         {/* Logo */}
         {settings.logo_url && (
           <motion.div
             className="absolute"
-            style={{ left: `${positions.logo.x}%`, top: `${positions.logo.y}%` }}
+            style={anchorStyle(positions.logo)}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.8 }}
@@ -105,7 +109,7 @@ export default function PhotoSlide({
         {/* Clock */}
         <motion.div
           className="absolute"
-          style={{ left: `${positions.clock.x}%`, top: `${positions.clock.y}%` }}
+          style={{ ...anchorStyle(positions.clock), textAlign: positions.clock.x > 50 ? 'right' : 'left' }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.8, delay: 0.1 }}
@@ -117,8 +121,8 @@ export default function PhotoSlide({
         {/* Weather */}
         <motion.div
           className="absolute"
-          style={{ left: `${positions.weather.x}%`, top: `${positions.weather.y}%`, maxWidth: isPortrait ? '48%' : '45%', transform: `scale(${wScale})`, transformOrigin: 'top left' }}
-          initial={{ opacity: 0, y: 20 }}
+          style={{ ...anchorStyle(positions.weather), maxWidth: isPortrait ? '48%' : '45%', transform: `scale(${wScale})`, transformOrigin: `${positions.weather.x <= 50 ? 'left' : 'right'} ${positions.weather.y <= 50 ? 'top' : 'bottom'}` }}
+          initial={{ opacity: 0, y: positions.weather.y <= 50 ? -20 : 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
         >
@@ -128,8 +132,8 @@ export default function PhotoSlide({
         {/* News */}
         <motion.div
           className="absolute"
-          style={{ left: `${positions.news.x}%`, top: `${positions.news.y}%`, maxWidth: isPortrait ? '48%' : '45%', transform: `scale(${wScale})`, transformOrigin: 'top left' }}
-          initial={{ opacity: 0, y: 20 }}
+          style={{ ...anchorStyle(positions.news), maxWidth: isPortrait ? '48%' : '45%', transform: `scale(${wScale})`, transformOrigin: `${positions.news.x <= 50 ? 'left' : 'right'} ${positions.news.y <= 50 ? 'top' : 'bottom'}` }}
+          initial={{ opacity: 0, y: positions.news.y <= 50 ? -20 : 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.4 }}
         >
