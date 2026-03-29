@@ -4,17 +4,17 @@ import { Button } from "../../components/ui/button";
 import { Maximize2, Image as ImageIcon, RotateCcw } from "lucide-react";
 
 export const DEFAULT_POSITIONS_LANDSCAPE = {
-  logo: { x: 5, y: 5 },
-  clock: { x: 90, y: 5 },
-  weather: { x: 5, y: 92 },
-  news: { x: 90, y: 92 },
+  logo: { x: 2, y: 2 },
+  clock: { x: 98, y: 2 },
+  weather: { x: 2, y: 98 },
+  news: { x: 98, y: 98 },
 };
 
 export const DEFAULT_POSITIONS_PORTRAIT = {
-  logo: { x: 10, y: 4 },
-  clock: { x: 85, y: 4 },
-  weather: { x: 10, y: 92 },
-  news: { x: 85, y: 92 },
+  logo: { x: 2, y: 2 },
+  clock: { x: 98, y: 2 },
+  weather: { x: 2, y: 98 },
+  news: { x: 98, y: 98 },
 };
 
 const WIDGETS = [

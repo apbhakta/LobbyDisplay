@@ -19,35 +19,25 @@ const API = `${BACKEND_URL}/api`;
 const LogoOverlay = ({ logoUrl, positions, visibility, glassEffect }) => {
   if (!logoUrl) return null;
   if (visibility?.logo === false) return null;
-  const pos = positions?.logo || { x: 5, y: 5 };
+  const pos = positions?.logo || { x: 2, y: 2 };
   const glass = glassEffect !== false;
-  // Edge-aware positioning — anchors to nearest edge to prevent cutoff
-  const x = Math.max(1, Math.min(99, pos.x));
-  const y = Math.max(1, Math.min(99, pos.y));
+  // Corner-aware: pins to nearest edge
   const style = {};
-  if (x <= 20) { style.left = `${x}%`; }
-  else if (x >= 80) { style.right = `${100 - x}%`; }
-  else { style.left = `${x}%`; style.transform = 'translateX(-50%)'; }
-  if (y <= 20) { style.top = `${y}%`; }
-  else if (y >= 80) { style.bottom = `${100 - y}%`; }
-  else { style.top = `${y}%`; style.transform = (style.transform || '') + ' translateY(-50%)'; }
+  if (pos.x <= 25) { style.left = 0; }
+  else if (pos.x >= 75) { style.right = 0; }
+  else { style.left = `${pos.x}%`; style.transform = 'translateX(-50%)'; }
+  if (pos.y <= 25) { style.top = 0; }
+  else if (pos.y >= 75) { style.bottom = 0; }
+  else { style.top = `${pos.y}%`; style.transform = (style.transform || '') + ' translateY(-50%)'; }
+  style.padding = 14;
   return (
-    <div
-      className="absolute z-[10]"
-      style={style}
-      data-testid="hotel-logo-overlay"
-    >
+    <div className="absolute z-[10]" style={style} data-testid="hotel-logo-overlay">
       {glass ? (
         <div className="rounded-2xl backdrop-blur-md border border-white/10 bg-black/20 p-2">
           <img src={logoUrl} alt="Hotel Logo" className="h-10 w-auto max-w-[110px] object-contain" />
         </div>
       ) : (
-        <img
-          src={logoUrl}
-          alt="Hotel Logo"
-          className="h-12 w-auto max-w-[120px] object-contain drop-shadow-lg"
-          style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.5))' }}
-        />
+        <img src={logoUrl} alt="Hotel Logo" className="h-12 w-auto max-w-[120px] object-contain drop-shadow-lg" style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.5))' }} />
       )}
     </div>
   );
