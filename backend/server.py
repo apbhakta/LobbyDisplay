@@ -1,4 +1,5 @@
-from fastapi import FastAPI, APIRouter, UploadFile, File, HTTPException
+from fastapi import FastAPI, APIRouter, UploadFile, File, HTTPException, Request, Depends
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -9,10 +10,12 @@ from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import httpx
 import base64
 import aiofiles
+import bcrypt
+import jwt
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -42,6 +45,66 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# ===== Auth Helpers =====
+JWT_SECRET = os.environ.get('JWT_SECRET', '')
+JWT_ALGORITHM = "HS256"
+
+def hash_password(password: str) -> str:
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password.encode("utf-8"))
+
+def create_access_token(user_id: str, email: str) -> str:
+    payload = {"sub": user_id, "email": email, "exp": datetime.now(timezone.utc) + timedelta(hours=24), "type": "access"}
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+async def get_current_user(request: Request) -> dict:
+    token = request.cookies.get("access_token")
+    if not token:
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.startswith("Bearer "):
+            token = auth_header[7:]
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        if payload.get("type") != "access":
+            raise HTTPException(status_code=401, detail="Invalid token type")
+        from bson import ObjectId
+        user = await db.users.find_one({"_id": ObjectId(payload["sub"])})
+        if not user:
+            raise HTTPException(status_code=401, detail="User not found")
+        user["_id"] = str(user["_id"])
+        user.pop("password_hash", None)
+        return user
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+async def seed_admin():
+    admin_email = os.environ.get("ADMIN_EMAIL", "admin@lobbydisplay.com").lower()
+    admin_password = os.environ.get("ADMIN_PASSWORD", "Admin@2026!")
+    existing = await db.users.find_one({"email": admin_email})
+    if existing is None:
+        hashed = hash_password(admin_password)
+        await db.users.insert_one({
+            "email": admin_email,
+            "password_hash": hashed,
+            "name": "Admin",
+            "role": "admin",
+            "created_at": datetime.now(timezone.utc),
+        })
+        logger.info(f"Admin user seeded: {admin_email}")
+    elif not verify_password(admin_password, existing["password_hash"]):
+        await db.users.update_one(
+            {"email": admin_email},
+            {"$set": {"password_hash": hash_password(admin_password)}}
+        )
+        logger.info(f"Admin password updated for: {admin_email}")
+    await db.users.create_index("email", unique=True)
 
 # ===== Models =====
 
@@ -362,6 +425,70 @@ FALLBACK_HEADLINES = [
 # Cache for weather and news
 weather_cache = {"data": None, "timestamp": None}
 news_cache = {"data": None, "timestamp": None}
+
+
+# ===== Auth Endpoints =====
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+@api_router.post("/auth/login")
+async def login(request: LoginRequest):
+    email = request.email.lower().strip()
+    user = await db.users.find_one({"email": email})
+    if not user or not verify_password(request.password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    
+    token = create_access_token(str(user["_id"]), email)
+    response = JSONResponse(content={
+        "id": str(user["_id"]),
+        "email": user["email"],
+        "name": user.get("name", "Admin"),
+        "role": user.get("role", "admin"),
+        "token": token,
+    })
+    response.set_cookie(
+        key="access_token", value=token, httponly=True,
+        secure=False, samesite="lax", max_age=86400, path="/"
+    )
+    return response
+
+@api_router.get("/auth/me")
+async def get_me(user: dict = Depends(get_current_user)):
+    return {
+        "id": user["_id"],
+        "email": user["email"],
+        "name": user.get("name", "Admin"),
+        "role": user.get("role", "admin"),
+    }
+
+@api_router.post("/auth/logout")
+async def logout():
+    response = JSONResponse(content={"status": "logged out"})
+    response.delete_cookie("access_token", path="/")
+    return response
+
+@api_router.post("/auth/change-password")
+async def change_password(request: ChangePasswordRequest, user: dict = Depends(get_current_user)):
+    from bson import ObjectId
+    full_user = await db.users.find_one({"_id": ObjectId(user["_id"])})
+    if not full_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if not verify_password(request.current_password, full_user["password_hash"]):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+    if len(request.new_password) < 6:
+        raise HTTPException(status_code=400, detail="New password must be at least 6 characters")
+    await db.users.update_one(
+        {"_id": ObjectId(user["_id"])},
+        {"$set": {"password_hash": hash_password(request.new_password)}}
+    )
+    return {"status": "password changed"}
+
 
 # ===== Settings Endpoints =====
 
@@ -1019,6 +1146,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.on_event("startup")
+async def startup_seed():
+    await seed_admin()
+
 
 @app.on_event("shutdown")
 async def shutdown_db_client():

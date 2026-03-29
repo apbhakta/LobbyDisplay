@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import LoginPage from "./LoginPage";
 import { 
   Settings, 
   Image as ImageIcon, 
@@ -46,7 +47,9 @@ import {
   ImagePlus,
   ArrowUpDown,
   CalendarDays,
-  Timer
+  Timer,
+  Lock,
+  KeyRound
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -549,6 +552,81 @@ const WidgetPositionPanel = ({ settings, setSettings }) => {
 
 export default function AdminPanel() {
   const navigate = useNavigate();
+  const [user, setUser] = useState(null);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [showPasswordChange, setShowPasswordChange] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({ current: "", new: "", confirm: "" });
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordLoading, setPasswordLoading] = useState(false);
+
+  // Check existing auth on mount
+  useEffect(() => {
+    const token = localStorage.getItem("admin_token");
+    const savedUser = localStorage.getItem("admin_user");
+    if (token && savedUser) {
+      axios.get(`${API}/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
+        .then(res => { setUser(res.data); setAuthChecked(true); })
+        .catch(() => { localStorage.removeItem("admin_token"); localStorage.removeItem("admin_user"); setAuthChecked(true); });
+    } else {
+      setAuthChecked(true);
+    }
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("admin_token");
+    localStorage.removeItem("admin_user");
+    setUser(null);
+  };
+
+  const handleChangePassword = async () => {
+    setPasswordError("");
+    if (passwordForm.new !== passwordForm.confirm) {
+      setPasswordError("New passwords don't match");
+      return;
+    }
+    if (passwordForm.new.length < 6) {
+      setPasswordError("New password must be at least 6 characters");
+      return;
+    }
+    setPasswordLoading(true);
+    try {
+      const token = localStorage.getItem("admin_token");
+      await axios.post(`${API}/auth/change-password`, 
+        { current_password: passwordForm.current, new_password: passwordForm.new },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success("Password changed successfully");
+      setShowPasswordChange(false);
+      setPasswordForm({ current: "", new: "", confirm: "" });
+    } catch (err) {
+      setPasswordError(err.response?.data?.detail || "Failed to change password");
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
+  // Show login if not authenticated
+  if (!authChecked) {
+    return <div className="min-h-screen bg-slate-950 flex items-center justify-center"><div className="text-white/50">Loading...</div></div>;
+  }
+  if (!user) {
+    return <LoginPage onLogin={(u) => setUser(u)} />;
+  }
+
+  return <AdminDashboard 
+    navigate={navigate} user={user} 
+    onLogout={handleLogout} 
+    showPasswordChange={showPasswordChange}
+    setShowPasswordChange={setShowPasswordChange}
+    passwordForm={passwordForm}
+    setPasswordForm={setPasswordForm}
+    passwordError={passwordError}
+    handleChangePassword={handleChangePassword}
+    passwordLoading={passwordLoading}
+  />;
+}
+
+function AdminDashboard({ navigate, user, onLogout, showPasswordChange, setShowPasswordChange, passwordForm, setPasswordForm, passwordError, handleChangePassword, passwordLoading }) {
   const [settings, setSettings] = useState({
     hotel_name: "",
     city: "Clifton, Texas",
@@ -952,17 +1030,110 @@ export default function AdminPanel() {
               <p className="text-sm text-muted-foreground">Manage your lobby display</p>
             </div>
           </div>
-          <Button 
-            variant="outline" 
-            onClick={() => navigate("/")}
-            className="gap-2"
-            data-testid="preview-display-button"
-          >
-            <Eye className="w-4 h-4" />
-            Preview Display
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button 
+              variant="outline" 
+              onClick={() => navigate("/")}
+              className="gap-2"
+              data-testid="preview-display-button"
+            >
+              <Eye className="w-4 h-4" />
+              Preview
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowPasswordChange(true)}
+              className="gap-2 text-muted-foreground"
+              data-testid="change-password-btn"
+            >
+              <KeyRound className="w-4 h-4" />
+              Password
+            </Button>
+            <div className="h-6 w-px bg-white/10" />
+            <span className="text-xs text-muted-foreground">{user?.email}</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onLogout}
+              className="gap-2 text-red-400 hover:text-red-300"
+              data-testid="logout-btn"
+            >
+              <LogOut className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </header>
+
+      {/* Password Change Modal */}
+      {showPasswordChange && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm" data-testid="password-change-modal">
+          <div className="bg-slate-900 border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                <Lock className="w-5 h-5 text-blue-400" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-white">Change Password</h3>
+                <p className="text-xs text-white/50">Update your admin password</p>
+              </div>
+            </div>
+
+            {passwordError && (
+              <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-center gap-2" data-testid="password-change-error">
+                <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                {passwordError}
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <div>
+                <Label className="text-white/60">Current Password</Label>
+                <Input
+                  type="password"
+                  value={passwordForm.current}
+                  onChange={(e) => setPasswordForm(p => ({ ...p, current: e.target.value }))}
+                  placeholder="Enter current password"
+                  data-testid="current-password-input"
+                />
+              </div>
+              <div>
+                <Label className="text-white/60">New Password</Label>
+                <Input
+                  type="password"
+                  value={passwordForm.new}
+                  onChange={(e) => setPasswordForm(p => ({ ...p, new: e.target.value }))}
+                  placeholder="Enter new password (min 6 chars)"
+                  data-testid="new-password-input"
+                />
+              </div>
+              <div>
+                <Label className="text-white/60">Confirm New Password</Label>
+                <Input
+                  type="password"
+                  value={passwordForm.confirm}
+                  onChange={(e) => setPasswordForm(p => ({ ...p, confirm: e.target.value }))}
+                  placeholder="Confirm new password"
+                  data-testid="confirm-password-input"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6 justify-end">
+              <Button variant="outline" onClick={() => { setShowPasswordChange(false); setPasswordForm({ current: "", new: "", confirm: "" }); }} data-testid="cancel-password-btn">
+                Cancel
+              </Button>
+              <Button
+                onClick={handleChangePassword}
+                disabled={passwordLoading || !passwordForm.current || !passwordForm.new || !passwordForm.confirm}
+                data-testid="save-password-btn"
+              >
+                {passwordLoading ? "Saving..." : "Change Password"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-6 py-8">
