@@ -54,11 +54,23 @@ Build a premium fullscreen hotel lobby display web app in Clifton, Texas for a T
 - [x] AdminPanel.jsx reduced from 2981 → 2194 lines
 - [x] All 8 tabs working: Images, Attractions, Events, Content, Settings, Display, Overlays, Videos
 
+### Phase 16: Widget Customization (Completed Mar 2026)
+- [x] Widget Visibility toggles: Logo, Clock, Weather, News (on/off per widget)
+- [x] Universal Glass Effect toggle (glassmorphism on/off for all widgets + logo)
+- [x] Clock Style selector: Digital, Minimal, Large
+- [x] Clock Font selector: Modern (Sans), Classic (Serif), Monospace
+- [x] Clock Format selector: 12-Hour (AM/PM), 24-Hour
+- [x] Individual Widget Color pickers for Clock, Weather, News
+- [x] Backend SettingsUpdate model extended with all new fields
+- [x] Admin Panel Display tab Widget Customization card
+- [x] PhotoSlide uses visibility/colors/glass from settings
+- [x] LogoOverlay respects visibility.logo and glass_effect on non-photo slides
+
 ### Admin Panel (8 tabs)
 - Images, Attractions, Events, Content, Settings, Display, Overlays, Videos
 
 ## DB Schema
-- `settings`: hotel_name, city, logo_url, logo_cloudinary_id, news_category, photo_interval, weather_slide_duration, widget_positions (continuous %), widget_scale, font_scale, etc.
+- `settings`: hotel_name, city, logo_url, logo_cloudinary_id, news_category, photo_interval, weather_slide_duration, widget_positions (continuous %), widget_scale, font_scale, widget_visibility, widget_colors, clock_style, font_style, clock_format, glass_effect, etc.
 - `images`: id, filename, url, cloudinary_public_id, uploaded_at
 - `videos`: id, title, description, video_url, video_cloudinary_id, thumbnail_url, thumbnail_cloudinary_id, start_date, end_date, active, featured, mute, autoplay, loop, show_controls, order, frequency
 - `attractions`: id, name, description, distance, category, image_url, enabled, order
