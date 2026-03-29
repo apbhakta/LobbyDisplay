@@ -600,7 +600,8 @@ function AdminDashboard({ navigate, user, onLogout, showPasswordChange, setShowP
   }, [fetchSettings, fetchImages, fetchWeather, fetchEvents, fetchContent]);
 
   const handleSaveSettings = async (settingsToSave) => {
-    const data = settingsToSave || settings;
+    // Guard against receiving event objects from onClick handlers
+    const data = (settingsToSave && settingsToSave.widget_positions !== undefined) ? settingsToSave : settings;
     setLoading(true);
     try {
       await axios.put(`${API}/settings`, data);
