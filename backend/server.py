@@ -683,7 +683,8 @@ async def upload_logo(file: UploadFile = File(...)):
         result = cloudinary.uploader.upload(
             content,
             folder="hotel_lobby/logo",
-            resource_type="image"
+            resource_type="image",
+            format="png"
         )
     except Exception as e:
         logger.error(f"Cloudinary logo upload failed: {e}")
