@@ -55,10 +55,11 @@ export default function PhotoSlide({
 
   const anchorStyle = (pos) => {
     const style = {};
-    if (pos.x <= 50) style.left = `${pos.x}%`;
-    else style.right = `${100 - pos.x}%`;
-    if (pos.y <= 50) style.top = `${pos.y}%`;
-    else style.bottom = `${100 - pos.y}%`;
+    // Add small inset so widgets at edges (0/100) don't get cut off
+    if (pos.x <= 50) style.left = `${Math.max(pos.x, 1)}%`;
+    else style.right = `${Math.max(100 - pos.x, 1)}%`;
+    if (pos.y <= 50) style.top = `${Math.max(pos.y, 1)}%`;
+    else style.bottom = `${Math.max(100 - pos.y, 2)}%`;
     return style;
   };
 
@@ -120,8 +121,8 @@ export default function PhotoSlide({
 
         {/* Weather */}
         <motion.div
-          className="absolute"
-          style={{ ...anchorStyle(positions.weather), maxWidth: isPortrait ? '48%' : '45%', transform: `scale(${wScale})`, transformOrigin: `${positions.weather.x <= 50 ? 'left' : 'right'} ${positions.weather.y <= 50 ? 'top' : 'bottom'}` }}
+          className="absolute overflow-hidden"
+          style={{ ...anchorStyle(positions.weather), maxWidth: isPortrait ? '48%' : '45%', maxHeight: '30%', transform: `scale(${wScale})`, transformOrigin: `${positions.weather.x <= 50 ? 'left' : 'right'} ${positions.weather.y <= 50 ? 'top' : 'bottom'}` }}
           initial={{ opacity: 0, y: positions.weather.y <= 50 ? -20 : 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
@@ -131,8 +132,8 @@ export default function PhotoSlide({
 
         {/* News */}
         <motion.div
-          className="absolute"
-          style={{ ...anchorStyle(positions.news), maxWidth: isPortrait ? '48%' : '45%', transform: `scale(${wScale})`, transformOrigin: `${positions.news.x <= 50 ? 'left' : 'right'} ${positions.news.y <= 50 ? 'top' : 'bottom'}` }}
+          className="absolute overflow-hidden"
+          style={{ ...anchorStyle(positions.news), maxWidth: isPortrait ? '48%' : '45%', maxHeight: '18%', transform: `scale(${wScale})`, transformOrigin: `${positions.news.x <= 50 ? 'left' : 'right'} ${positions.news.y <= 50 ? 'top' : 'bottom'}` }}
           initial={{ opacity: 0, y: positions.news.y <= 50 ? -20 : 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.4 }}
