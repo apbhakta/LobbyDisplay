@@ -35,14 +35,28 @@ export default function PhotoSlide({
   const wScale = settings.widget_scale || 1;
   const currentHeadline = headlines[currentHeadlineIndex];
 
-  // Widget positions — continuous percentages (0-100)
+  // Widget positions — continuous percentages (0-95)
+  // Migrate old grid values (100 = off-screen) to safe defaults
+  const migratePos = (pos, fallback) => {
+    if (!pos) return fallback;
+    return {
+      x: pos.x >= 95 ? fallback.x : pos.x,
+      y: pos.y >= 95 ? fallback.y : pos.y,
+    };
+  };
   const defaultPos = {
     logo: { x: 3, y: 3 },
-    clock: { x: 85, y: 3 },
-    weather: { x: 3, y: 80 },
-    news: { x: 55, y: 85 },
+    clock: { x: 80, y: 3 },
+    weather: { x: 3, y: 78 },
+    news: { x: 50, y: 85 },
   };
-  const positions = { ...defaultPos, ...settings.widget_positions };
+  const raw = settings.widget_positions || {};
+  const positions = {
+    logo: migratePos(raw.logo, defaultPos.logo),
+    clock: migratePos(raw.clock || raw.hotel_name, defaultPos.clock),
+    weather: migratePos(raw.weather, defaultPos.weather),
+    news: migratePos(raw.news, defaultPos.news),
+  };
 
   return (
     <div className="w-full h-full relative" data-testid="photo-slide">

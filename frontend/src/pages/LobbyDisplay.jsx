@@ -18,7 +18,8 @@ const API = `${BACKEND_URL}/api`;
 // For non-photo slides, show logo at its positioned location
 const LogoOverlay = ({ logoUrl, positions }) => {
   if (!logoUrl) return null;
-  const pos = positions?.logo || { x: 3, y: 3 };
+  const raw = positions?.logo || { x: 3, y: 3 };
+  const pos = { x: raw.x >= 95 ? 3 : raw.x, y: raw.y >= 95 ? 3 : raw.y };
   return (
     <div
       className="absolute z-[10]"
