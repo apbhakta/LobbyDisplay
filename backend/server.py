@@ -1,6 +1,5 @@
 from fastapi import FastAPI, APIRouter, UploadFile, File, HTTPException, Request, Depends
 from fastapi.responses import JSONResponse
-from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -12,10 +11,10 @@ from typing import List, Optional
 import uuid
 from datetime import datetime, timezone, timedelta
 import httpx
-import base64
-import aiofiles
 import bcrypt
 import jwt
+import cloudinary
+import cloudinary.uploader
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -31,13 +30,17 @@ app = FastAPI()
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
 
-# Ensure uploads directory exists
-UPLOADS_DIR = ROOT_DIR / "uploads"
-UPLOADS_DIR.mkdir(exist_ok=True)
-
 # API Keys from environment
 WEATHERAPI_KEY = os.environ.get('WEATHERAPI_KEY', '')
 NEWS_API_KEY = os.environ.get('NEWS_API_KEY', '')
+
+# Cloudinary configuration
+cloudinary.config(
+    cloud_name=os.environ.get("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.environ.get("CLOUDINARY_API_KEY"),
+    api_secret=os.environ.get("CLOUDINARY_API_SECRET"),
+    secure=True
+)
 
 # Configure logging
 logging.basicConfig(
@@ -527,51 +530,93 @@ async def get_images():
 
 @api_router.post("/images", response_model=HotelImage)
 async def upload_image(file: UploadFile = File(...)):
-    """Upload a new hotel image"""
+    """Upload a new hotel image to Cloudinary"""
     if not file.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="File must be an image")
     
-    # Generate unique filename
-    ext = file.filename.split(".")[-1] if "." in file.filename else "jpg"
-    unique_filename = f"{uuid.uuid4()}.{ext}"
-    file_path = UPLOADS_DIR / unique_filename
+    content = await file.read()
+    try:
+        result = cloudinary.uploader.upload(
+            content,
+            folder="hotel_lobby/images",
+            resource_type="image"
+        )
+    except Exception as e:
+        logger.error(f"Cloudinary upload failed: {e}")
+        raise HTTPException(status_code=500, detail="Image upload failed")
     
-    # Save file
-    async with aiofiles.open(file_path, 'wb') as f:
-        content = await file.read()
-        await f.write(content)
-    
-    # Create image record
     image = HotelImage(
         filename=file.filename,
-        url=f"/api/uploads/{unique_filename}"
+        url=result["secure_url"],
     )
+    image_doc = image.model_dump()
+    image_doc["cloudinary_public_id"] = result["public_id"]
     
-    await db.images.insert_one(image.model_dump())
+    await db.images.insert_one(image_doc)
     return image
 
 @api_router.delete("/images/{image_id}")
 async def delete_image(image_id: str):
-    """Delete a hotel image"""
+    """Delete a hotel image from Cloudinary and DB"""
     image = await db.images.find_one({"id": image_id}, {"_id": 0})
     if not image:
         raise HTTPException(status_code=404, detail="Image not found")
     
-    # Delete file if it exists locally
-    if image.get("url", "").startswith("/api/uploads/"):
-        filename = image["url"].split("/")[-1]
-        file_path = UPLOADS_DIR / filename
-        if file_path.exists():
-            file_path.unlink()
+    # Delete from Cloudinary if public_id exists
+    public_id = image.get("cloudinary_public_id")
+    if public_id:
+        try:
+            cloudinary.uploader.destroy(public_id, invalidate=True)
+        except Exception as e:
+            logger.error(f"Cloudinary delete failed for {public_id}: {e}")
     
     await db.images.delete_one({"id": image_id})
     return {"message": "Image deleted successfully"}
 
 @api_router.post("/images/reset-defaults")
 async def reset_to_defaults():
-    """Reset images to default sample images"""
+    """Reset images to defaults"""
     await db.images.delete_many({})
     return {"message": "Images reset to defaults"}
+
+@api_router.post("/images/migrate-to-cloud")
+async def migrate_images_to_cloud():
+    """Migrate local /api/uploads/ images to Cloudinary"""
+    images = await db.images.find({}, {"_id": 0}).to_list(200)
+    local_images = [img for img in images if img.get("url", "").startswith("/api/uploads/")]
+    
+    if not local_images:
+        return {"message": "No local images to migrate", "migrated": 0}
+    
+    migrated = 0
+    failed = 0
+    uploads_dir = Path(__file__).parent / "uploads"
+    
+    for img in local_images:
+        filename = img["url"].split("/")[-1]
+        file_path = uploads_dir / filename
+        if not file_path.exists():
+            failed += 1
+            continue
+        try:
+            result = cloudinary.uploader.upload(
+                str(file_path),
+                folder="hotel_lobby/images",
+                resource_type="image"
+            )
+            await db.images.update_one(
+                {"id": img["id"]},
+                {"$set": {
+                    "url": result["secure_url"],
+                    "cloudinary_public_id": result["public_id"]
+                }}
+            )
+            migrated += 1
+        except Exception as e:
+            logger.error(f"Migration failed for {filename}: {e}")
+            failed += 1
+    
+    return {"message": f"Migration complete", "migrated": migrated, "failed": failed, "total_local": len(local_images)}
 
 # ===== Weather Provider: WeatherAPI.com =====
 # Maps WeatherAPI condition codes to OpenWeatherMap icon codes for frontend theme compatibility.
@@ -1060,14 +1105,22 @@ async def upload_event_image(event_id: str, file: UploadFile = File(...)):
     if ext not in [".jpg", ".jpeg", ".png", ".gif", ".webp"]:
         raise HTTPException(status_code=400, detail="Invalid file type")
 
-    filename = f"event_{event_id}{ext}"
-    filepath = UPLOADS_DIR / filename
-    async with aiofiles.open(str(filepath), "wb") as f:
-        content = await file.read()
-        await f.write(content)
+    content = await file.read()
+    try:
+        result = cloudinary.uploader.upload(
+            content,
+            folder="hotel_lobby/events",
+            resource_type="image"
+        )
+    except Exception as e:
+        logger.error(f"Cloudinary event image upload failed: {e}")
+        raise HTTPException(status_code=500, detail="Image upload failed")
 
-    image_url = f"/api/uploads/{filename}"
-    await db.local_events.update_one({"id": event_id}, {"$set": {"image_url": image_url}})
+    image_url = result["secure_url"]
+    await db.local_events.update_one(
+        {"id": event_id},
+        {"$set": {"image_url": image_url, "cloudinary_public_id": result["public_id"]}}
+    )
     return {"image_url": image_url}
 
 # ===== Overlay/Announcement Endpoints =====
@@ -1135,9 +1188,6 @@ async def health_check():
 
 # Include the router in the main app
 app.include_router(api_router)
-
-# Mount static files for uploaded images
-app.mount("/api/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
 
 app.add_middleware(
     CORSMiddleware,
