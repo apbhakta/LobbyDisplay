@@ -6,6 +6,7 @@ import WeatherSlide from "../components/WeatherSlide";
 import LocalAttractionsSlide from "../components/LocalAttractionsSlide";
 import EventsSlide from "../components/EventsSlide";
 import PhotoSlide from "../components/lobby/PhotoSlide";
+import VideoSlide from "../components/lobby/VideoSlide";
 import SlideIndicators from "../components/lobby/SlideIndicators";
 import OverlayDisplay from "../components/lobby/OverlayDisplay";
 
@@ -32,6 +33,7 @@ const SLIDE_TYPES = {
   WEATHER: 'weather',
   ATTRACTIONS: 'attractions',
   EVENTS: 'events',
+  VIDEO: 'video',
 };
 
 export default function LobbyDisplay() {
@@ -61,6 +63,8 @@ export default function LobbyDisplay() {
   const [attractions, setAttractions] = useState([]);
   const [localEvents, setLocalEvents] = useState([]);
   const [activeOverlays, setActiveOverlays] = useState([]);
+  const [videos, setVideos] = useState([]);
+  const [videoCycleCount, setVideoCycleCount] = useState(0);
 
   const currentTheme = useMemo(() => {
     if (!weather) return "sunny";
@@ -95,11 +99,14 @@ export default function LobbyDisplay() {
   const fetchOverlays = useCallback(async () => {
     try { setActiveOverlays((await axios.get(`${API}/overlays/active`)).data); } catch (e) { console.error("Overlays fetch error:", e); }
   }, []);
+  const fetchVideos = useCallback(async () => {
+    try { setVideos((await axios.get(`${API}/videos`, { params: { active_only: true } })).data); } catch (e) { console.error("Videos fetch error:", e); }
+  }, []);
 
   // Initial fetch
   useEffect(() => {
-    fetchSettings(); fetchImages(); fetchWeather(); fetchNews(); fetchAttractions(); fetchLocalEvents(); fetchOverlays();
-  }, [fetchSettings, fetchImages, fetchWeather, fetchNews, fetchAttractions, fetchLocalEvents, fetchOverlays]);
+    fetchSettings(); fetchImages(); fetchWeather(); fetchNews(); fetchAttractions(); fetchLocalEvents(); fetchOverlays(); fetchVideos();
+  }, [fetchSettings, fetchImages, fetchWeather, fetchNews, fetchAttractions, fetchLocalEvents, fetchOverlays, fetchVideos]);
 
   // Build slide queue
   useEffect(() => {
@@ -129,16 +136,43 @@ export default function LobbyDisplay() {
       newSlides.push({ type: SLIDE_TYPES.ATTRACTIONS, id: 'attractions', duration: specialDuration * 1000 });
       newSlides.push({ type: SLIDE_TYPES.EVENTS, id: 'events', duration: specialDuration * 1000 });
     }
-    setSlides(newSlides);
-  }, [images, settings.photo_interval, settings.weather_slide_duration]);
 
-  // Slide auto-advance
+    // Insert active videos based on frequency and cycle count
+    if (videos.length > 0) {
+      const activeVids = videos.filter(v => {
+        const freq = v.frequency || 1;
+        return videoCycleCount % freq === 0;
+      });
+      activeVids.forEach((vid, i) => {
+        // Use 120s max duration — video onEnded will advance sooner
+        const vidSlide = { type: SLIDE_TYPES.VIDEO, data: vid, id: `video-${vid.id}`, duration: 120 * 1000 };
+        // Insert videos spread throughout the slideshow
+        const insertAt = Math.min(3 + (i * 4), newSlides.length);
+        newSlides.splice(insertAt, 0, vidSlide);
+      });
+    }
+
+    setSlides(newSlides);
+  }, [images, videos, videoCycleCount, settings.photo_interval, settings.weather_slide_duration]);
+
+  // Slide auto-advance (skip timer for video slides — they advance on video end)
   useEffect(() => {
     if (slides.length === 0) return;
-    const duration = slides[currentSlideIndex]?.duration || 8000;
-    const timer = setTimeout(() => setCurrentSlideIndex((prev) => (prev + 1) % slides.length), duration);
+    const current = slides[currentSlideIndex];
+    if (current?.type === SLIDE_TYPES.VIDEO) return; // video handles its own advance
+    const duration = current?.duration || 8000;
+    const timer = setTimeout(() => advanceSlide(), duration);
     return () => clearTimeout(timer);
   }, [slides, currentSlideIndex]);
+
+  const advanceSlide = useCallback(() => {
+    setCurrentSlideIndex((prev) => {
+      const next = (prev + 1) % slides.length;
+      // Increment cycle count when we loop back to start
+      if (next === 0) setVideoCycleCount(c => c + 1);
+      return next;
+    });
+  }, [slides.length]);
 
   // Headline rotation
   useEffect(() => {
@@ -186,6 +220,8 @@ export default function LobbyDisplay() {
               <LocalAttractionsSlide weather={weather} isPortrait={isPortrait} attractions={attractions} maxItems={settings.attractions_per_slide || 6} />
             ) : currentSlide.type === SLIDE_TYPES.EVENTS ? (
               <EventsSlide weather={weather} currentTime={currentTime} isPortrait={isPortrait} events={localEvents} maxItems={settings.events_per_slide || 8} />
+            ) : currentSlide.type === SLIDE_TYPES.VIDEO ? (
+              <VideoSlide video={currentSlide.data} onVideoEnd={advanceSlide} isPortrait={isPortrait} />
             ) : (
               <PhotoSlide
                 image={currentSlide.data}

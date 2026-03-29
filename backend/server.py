@@ -392,6 +392,56 @@ class OverlayUpdate(BaseModel):
     start_time: Optional[str] = None
     end_time: Optional[str] = None
 
+# ===== Video/Commercial Model =====
+
+class Video(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    title: str
+    description: str = ""
+    video_url: str = ""
+    video_cloudinary_id: str = ""
+    thumbnail_url: str = ""
+    thumbnail_cloudinary_id: str = ""
+    start_date: str = ""  # YYYY-MM-DD, empty = immediate
+    end_date: str = ""  # YYYY-MM-DD, empty = indefinite
+    active: bool = True
+    featured: bool = False
+    mute: bool = True
+    autoplay: bool = True
+    loop: bool = False
+    show_controls: bool = False
+    order: int = 0
+    frequency: int = 1  # 1 = every cycle, 2 = every other cycle, etc.
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+class VideoCreate(BaseModel):
+    title: str
+    description: str = ""
+    start_date: str = ""
+    end_date: str = ""
+    active: bool = True
+    featured: bool = False
+    mute: bool = True
+    autoplay: bool = True
+    loop: bool = False
+    show_controls: bool = False
+    frequency: int = 1
+
+class VideoUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    active: Optional[bool] = None
+    featured: Optional[bool] = None
+    mute: Optional[bool] = None
+    autoplay: Optional[bool] = None
+    loop: Optional[bool] = None
+    show_controls: Optional[bool] = None
+    order: Optional[int] = None
+    frequency: Optional[int] = None
+
 DEFAULT_IMAGES = []  # No stock/demo images — user uploads their own
 
 FALLBACK_WEATHER = {
@@ -1216,6 +1266,158 @@ async def get_active_overlays():
             continue
         active.append(o)
     return active
+
+# ===== Video/Commercial Endpoints =====
+
+def _is_video_expired(end_date_str: str) -> bool:
+    if not end_date_str:
+        return False
+    try:
+        end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+        return end_date < datetime.now(timezone.utc).date()
+    except ValueError:
+        return False
+
+def _is_video_scheduled(start_date_str: str) -> bool:
+    if not start_date_str:
+        return False
+    try:
+        start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+        return start_date > datetime.now(timezone.utc).date()
+    except ValueError:
+        return False
+
+@api_router.get("/videos")
+async def get_videos(active_only: bool = False):
+    """Get all videos/commercials"""
+    items = await db.videos.find({}, {"_id": 0}).sort("order", 1).to_list(200)
+    for item in items:
+        item["is_expired"] = _is_video_expired(item.get("end_date", ""))
+        item["is_scheduled"] = _is_video_scheduled(item.get("start_date", ""))
+    if active_only:
+        items = [v for v in items if v.get("active") and not v["is_expired"] and not v["is_scheduled"] and v.get("video_url")]
+    return items
+
+@api_router.post("/videos")
+async def create_video(data: VideoCreate):
+    """Create a new video/commercial entry"""
+    count = await db.videos.count_documents({})
+    item = Video(**data.model_dump(), order=count)
+    doc = item.model_dump()
+    await db.videos.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+@api_router.put("/videos/{video_id}")
+async def update_video(video_id: str, data: VideoUpdate):
+    update_data = {k: v for k, v in data.model_dump().items() if v is not None}
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    await db.videos.update_one({"id": video_id}, {"$set": update_data})
+    item = await db.videos.find_one({"id": video_id}, {"_id": 0})
+    if not item:
+        raise HTTPException(status_code=404, detail="Video not found")
+    return item
+
+@api_router.delete("/videos/{video_id}")
+async def delete_video(video_id: str):
+    video = await db.videos.find_one({"id": video_id}, {"_id": 0})
+    if not video:
+        raise HTTPException(status_code=404, detail="Video not found")
+    # Delete video from Cloudinary
+    if video.get("video_cloudinary_id"):
+        try:
+            cloudinary.uploader.destroy(video["video_cloudinary_id"], resource_type="video", invalidate=True)
+        except Exception as e:
+            logger.error(f"Cloudinary video delete failed: {e}")
+    # Delete thumbnail from Cloudinary
+    if video.get("thumbnail_cloudinary_id"):
+        try:
+            cloudinary.uploader.destroy(video["thumbnail_cloudinary_id"], invalidate=True)
+        except Exception as e:
+            logger.error(f"Cloudinary thumbnail delete failed: {e}")
+    await db.videos.delete_one({"id": video_id})
+    return {"message": "Video deleted"}
+
+@api_router.post("/videos/{video_id}/upload")
+async def upload_video_file(video_id: str, file: UploadFile = File(...)):
+    """Upload a video file to Cloudinary for an existing video entry"""
+    video = await db.videos.find_one({"id": video_id}, {"_id": 0})
+    if not video:
+        raise HTTPException(status_code=404, detail="Video not found")
+
+    if not file.content_type or not file.content_type.startswith("video/"):
+        raise HTTPException(status_code=400, detail="File must be a video")
+
+    # Delete old video from Cloudinary if replacing
+    if video.get("video_cloudinary_id"):
+        try:
+            cloudinary.uploader.destroy(video["video_cloudinary_id"], resource_type="video", invalidate=True)
+        except Exception as e:
+            logger.error(f"Old video delete failed: {e}")
+
+    content = await file.read()
+    try:
+        result = cloudinary.uploader.upload(
+            content,
+            folder="hotel_lobby/videos",
+            resource_type="video",
+        )
+    except Exception as e:
+        logger.error(f"Cloudinary video upload failed: {e}")
+        raise HTTPException(status_code=500, detail="Video upload failed")
+
+    await db.videos.update_one(
+        {"id": video_id},
+        {"$set": {
+            "video_url": result["secure_url"],
+            "video_cloudinary_id": result["public_id"],
+        }}
+    )
+    return {"video_url": result["secure_url"]}
+
+@api_router.post("/videos/{video_id}/thumbnail")
+async def upload_video_thumbnail(video_id: str, file: UploadFile = File(...)):
+    """Upload a thumbnail/poster image for a video"""
+    video = await db.videos.find_one({"id": video_id}, {"_id": 0})
+    if not video:
+        raise HTTPException(status_code=404, detail="Video not found")
+
+    if not file.content_type or not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="File must be an image")
+
+    # Delete old thumbnail if replacing
+    if video.get("thumbnail_cloudinary_id"):
+        try:
+            cloudinary.uploader.destroy(video["thumbnail_cloudinary_id"], invalidate=True)
+        except Exception as e:
+            logger.error(f"Old thumbnail delete failed: {e}")
+
+    content = await file.read()
+    try:
+        result = cloudinary.uploader.upload(
+            content,
+            folder="hotel_lobby/video_thumbnails",
+            resource_type="image",
+        )
+    except Exception as e:
+        logger.error(f"Cloudinary thumbnail upload failed: {e}")
+        raise HTTPException(status_code=500, detail="Thumbnail upload failed")
+
+    await db.videos.update_one(
+        {"id": video_id},
+        {"$set": {
+            "thumbnail_url": result["secure_url"],
+            "thumbnail_cloudinary_id": result["public_id"],
+        }}
+    )
+    return {"thumbnail_url": result["secure_url"]}
+
+@api_router.post("/videos/reorder")
+async def reorder_videos(ids: List[str]):
+    for i, vid in enumerate(ids):
+        await db.videos.update_one({"id": vid}, {"$set": {"order": i}})
+    return {"message": "Videos reordered"}
 
 # ===== Health Check =====
 
