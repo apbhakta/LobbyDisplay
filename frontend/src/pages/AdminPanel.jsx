@@ -50,12 +50,12 @@ import {
   Timer,
   Lock,
   KeyRound,
-  Film,
-  Play,
-  Volume2,
-  VolumeX,
-  Repeat
+  Film
 } from "lucide-react";
+import WidgetPositionPanel from "../components/admin/WidgetPositionPanel";
+import AttractionsTab from "../components/admin/AttractionsTab";
+import OverlaysTab from "../components/admin/OverlaysTab";
+import VideosTab from "../components/admin/VideosTab";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
@@ -436,130 +436,7 @@ const LivePreview = ({ settings, weather }) => {
   );
 };
 
-// Widget Position Panel — allows drag-and-drop widget placement
-const WidgetPositionPanel = ({ settings, setSettings, onSave }) => {
-  const [activeWidget, setActiveWidget] = useState(null);
 
-  const positions = settings.widget_positions || {
-    hotel_name: { x: 0, y: 0 },
-    clock: { x: 100, y: 0 },
-    weather: { x: 0, y: 100 },
-    news: { x: 100, y: 100 },
-  };
-
-  const widgets = [
-    { key: "hotel_name", label: "Hotel Name", color: "bg-amber-500" },
-    { key: "clock", label: "Clock", color: "bg-blue-500" },
-    { key: "weather", label: "Weather", color: "bg-green-500" },
-    { key: "news", label: "News", color: "bg-purple-500" },
-  ];
-
-  const spots = [
-    { x: 0, y: 0, label: "Top-Left" },
-    { x: 50, y: 0, label: "Top-Center" },
-    { x: 100, y: 0, label: "Top-Right" },
-    { x: 0, y: 100, label: "Bottom-Left" },
-    { x: 50, y: 100, label: "Bottom-Center" },
-    { x: 100, y: 100, label: "Bottom-Right" },
-  ];
-
-  const handleSpotClick = (spot) => {
-    if (!activeWidget) return;
-    const newPositions = { ...positions, [activeWidget]: { x: spot.x, y: spot.y } };
-    setSettings(prev => {
-      const updated = { ...prev, widget_positions: newPositions };
-      // Auto-save widget positions
-      if (onSave) {
-        setTimeout(() => onSave(updated), 100);
-      }
-      return updated;
-    });
-    setActiveWidget(null);
-  };
-
-  const getWidgetAtSpot = (spot) => {
-    return widgets.find(w => positions[w.key]?.x === spot.x && positions[w.key]?.y === spot.y);
-  };
-
-  return (
-    <Card className="bg-card border-white/10">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Maximize2 className="w-5 h-5" />
-          Widget Positioning
-        </CardTitle>
-        <CardDescription>Click on a position to place each widget on the photo slides</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Widget selector buttons */}
-        <div className="flex gap-2 flex-wrap">
-          {widgets.map(w => (
-            <button
-              key={w.key}
-              onClick={() => setActiveWidget(activeWidget === w.key ? null : w.key)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
-                activeWidget === w.key
-                  ? "border-primary bg-primary/20 ring-2 ring-primary/30"
-                  : "border-white/10 hover:border-white/20"
-              }`}
-              data-testid={`widget-select-${w.key}`}
-            >
-              <span className={`inline-block w-2 h-2 rounded-full ${w.color} mr-2`} />
-              {w.label}
-            </button>
-          ))}
-        </div>
-        {activeWidget && (
-          <p className="text-xs text-primary">Click a position below to place <strong>{widgets.find(w => w.key === activeWidget)?.label}</strong></p>
-        )}
-
-        {/* Visual grid */}
-        <div
-          className="relative rounded-xl border border-white/20 overflow-hidden"
-          style={{
-            aspectRatio: settings.display_orientation === "portrait" ? '3/4' : '16/9',
-            maxHeight: 220,
-            background: 'linear-gradient(180deg, #334155 0%, #475569 50%, #1e293b 100%)',
-          }}
-        >
-          <div className="absolute inset-0 bg-black/20" />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <ImageIcon className="w-8 h-8 text-white/10" />
-          </div>
-          {spots.map((spot) => {
-            const widgetHere = getWidgetAtSpot(spot);
-            return (
-              <button
-                key={`${spot.x}-${spot.y}`}
-                onClick={() => handleSpotClick(spot)}
-                className={`absolute z-10 transition-all ${activeWidget ? "cursor-pointer hover:scale-110" : "cursor-default"}`}
-                style={{
-                  left: spot.x === 0 ? '8px' : spot.x === 50 ? '50%' : 'auto',
-                  right: spot.x === 100 ? '8px' : 'auto',
-                  top: spot.y === 0 ? '8px' : 'auto',
-                  bottom: spot.y === 100 ? '8px' : 'auto',
-                  transform: spot.x === 50 ? 'translateX(-50%)' : undefined,
-                }}
-                data-testid={`widget-spot-${spot.x}-${spot.y}`}
-              >
-                {widgetHere ? (
-                  <div className={`${widgetHere.color} text-white text-[10px] font-bold px-2.5 py-1 rounded-lg shadow-lg`}>
-                    {widgetHere.label}
-                  </div>
-                ) : (
-                  <div className={`w-6 h-6 rounded-lg border-2 border-dashed ${activeWidget ? "border-primary/60 bg-primary/10" : "border-white/20 bg-white/5"} flex items-center justify-center`}>
-                    {activeWidget && <Plus className="w-3 h-3 text-primary/60" />}
-                  </div>
-                )}
-              </button>
-            );
-          })}
-        </div>
-        <p className="text-xs text-muted-foreground text-center">Select a widget, then click a position on the preview to move it</p>
-      </CardContent>
-    </Card>
-  );
-};
 
 
 export default function AdminPanel() {
@@ -658,24 +535,14 @@ function AdminDashboard({ navigate, user, onLogout, showPasswordChange, setShowP
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [weather, setWeather] = useState(null);
-  const [attractions, setAttractions] = useState([]);
   const [contentItems, setContentItems] = useState({});
   const [activeContentType, setActiveContentType] = useState("announcement");
-  const [editingAttraction, setEditingAttraction] = useState(null);
-  const [newAttraction, setNewAttraction] = useState(null);
   const [editingContent, setEditingContent] = useState(null);
   const [newContent, setNewContent] = useState(null);
   const [events, setEvents] = useState([]);
   const [editingEvent, setEditingEvent] = useState(null);
   const [newEvent, setNewEvent] = useState(null);
   const [eventSortBy, setEventSortBy] = useState("upcoming");
-  const [overlays, setOverlays] = useState([]);
-  const [editingOverlay, setEditingOverlay] = useState(null);
-  const [newOverlay, setNewOverlay] = useState(null);
-  const [videos, setVideos] = useState([]);
-  const [editingVideo, setEditingVideo] = useState(null);
-  const [newVideo, setNewVideo] = useState(null);
-  const [videoUploading, setVideoUploading] = useState(false);
 
   const fetchSettings = useCallback(async () => {
     try {
@@ -706,15 +573,6 @@ function AdminDashboard({ navigate, user, onLogout, showPasswordChange, setShowP
     }
   }, []);
 
-  const fetchAttractions = useCallback(async () => {
-    try {
-      const response = await axios.get(`${API}/attractions`);
-      setAttractions(response.data);
-    } catch (error) {
-      console.error("Error fetching attractions:", error);
-    }
-  }, []);
-
   const fetchContent = useCallback(async (sectionType) => {
     try {
       const response = await axios.get(`${API}/content/${sectionType}`);
@@ -733,34 +591,13 @@ function AdminDashboard({ navigate, user, onLogout, showPasswordChange, setShowP
     }
   }, []);
 
-  const fetchOverlays = useCallback(async () => {
-    try {
-      const response = await axios.get(`${API}/overlays`);
-      setOverlays(response.data);
-    } catch (error) {
-      console.error("Error fetching overlays:", error);
-    }
-  }, []);
-
-  const fetchVideos = useCallback(async () => {
-    try {
-      const response = await axios.get(`${API}/videos`);
-      setVideos(response.data);
-    } catch (error) {
-      console.error("Error fetching videos:", error);
-    }
-  }, []);
-
   useEffect(() => {
     fetchSettings();
     fetchImages();
     fetchWeather();
-    fetchAttractions();
     fetchEvents();
-    fetchOverlays();
-    fetchVideos();
     CONTENT_SECTIONS.forEach(s => fetchContent(s.type));
-  }, [fetchSettings, fetchImages, fetchWeather, fetchAttractions, fetchEvents, fetchOverlays, fetchVideos, fetchContent]);
+  }, [fetchSettings, fetchImages, fetchWeather, fetchEvents, fetchContent]);
 
   const handleSaveSettings = async (settingsToSave) => {
     const data = settingsToSave || settings;
@@ -867,50 +704,6 @@ function AdminDashboard({ navigate, user, onLogout, showPasswordChange, setShowP
       }));
     } else {
       setSettings(prev => ({ ...prev, display_orientation: orientation }));
-    }
-  };
-
-  // ===== Attractions CRUD =====
-  const handleCreateAttraction = async () => {
-    if (!newAttraction?.name) return;
-    try {
-      const response = await axios.post(`${API}/attractions`, newAttraction);
-      setAttractions(prev => [...prev, response.data]);
-      setNewAttraction(null);
-      toast.success("Attraction added");
-    } catch (error) {
-      toast.error("Failed to add attraction");
-    }
-  };
-
-  const handleUpdateAttraction = async (id) => {
-    if (!editingAttraction) return;
-    try {
-      const response = await axios.put(`${API}/attractions/${id}`, editingAttraction);
-      setAttractions(prev => prev.map(a => a.id === id ? response.data : a));
-      setEditingAttraction(null);
-      toast.success("Attraction updated");
-    } catch (error) {
-      toast.error("Failed to update attraction");
-    }
-  };
-
-  const handleDeleteAttraction = async (id) => {
-    try {
-      await axios.delete(`${API}/attractions/${id}`);
-      setAttractions(prev => prev.filter(a => a.id !== id));
-      toast.success("Attraction deleted");
-    } catch (error) {
-      toast.error("Failed to delete attraction");
-    }
-  };
-
-  const handleToggleAttraction = async (item) => {
-    try {
-      const response = await axios.put(`${API}/attractions/${item.id}`, { enabled: !item.enabled });
-      setAttractions(prev => prev.map(a => a.id === item.id ? response.data : a));
-    } catch (error) {
-      toast.error("Failed to toggle attraction");
     }
   };
 
@@ -1239,218 +1032,9 @@ function AdminDashboard({ navigate, user, onLogout, showPasswordChange, setShowP
 
           {/* Attractions Tab */}
           <TabsContent value="attractions" className="space-y-6" data-testid="attractions-tab-content">
-            <Card className="bg-card border-white/10">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <MapPin className="w-5 h-5" />
-                      Local Attractions
-                    </CardTitle>
-                    <CardDescription>Manage attractions shown in the lobby display</CardDescription>
-                  </div>
-                  <Button 
-                    onClick={() => setNewAttraction({ name: "", description: "", distance: "", category: "dining", image_url: "", enabled: true })}
-                    className="gap-2"
-                    data-testid="add-attraction-button"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Add Attraction
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Attractions Settings */}
-                <div className="flex items-center gap-6 p-4 rounded-lg bg-muted/50 border border-white/5">
-                  <div className="space-y-1 flex-1">
-                    <Label>Attractions per slide</Label>
-                    <Input
-                      type="number"
-                      min="2"
-                      max="12"
-                      value={settings.attractions_per_slide || 6}
-                      onChange={(e) => setSettings({ ...settings, attractions_per_slide: parseInt(e.target.value) || 6 })}
-                      className="w-24"
-                      data-testid="attractions-per-slide-input"
-                    />
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Label>Auto-rotate</Label>
-                    <Switch
-                      checked={settings.attractions_auto_rotate !== false}
-                      onCheckedChange={(checked) => setSettings({ ...settings, attractions_auto_rotate: checked })}
-                      data-testid="attractions-auto-rotate-toggle"
-                    />
-                  </div>
-                  <Button onClick={handleSaveSettings} disabled={loading} size="sm" className="gap-2">
-                    <Save className="w-3 h-3" />
-                    Save
-                  </Button>
-                </div>
-
-                {/* New Attraction Form */}
-                {newAttraction && (
-                  <div className="p-4 rounded-lg border-2 border-primary/30 bg-primary/5 space-y-3" data-testid="new-attraction-form">
-                    <p className="text-sm font-medium text-primary">New Attraction</p>
-                    <div className="grid grid-cols-2 gap-3">
-                      <Input
-                        placeholder="Attraction name"
-                        value={newAttraction.name}
-                        onChange={(e) => setNewAttraction({ ...newAttraction, name: e.target.value })}
-                        data-testid="new-attraction-name"
-                      />
-                      <Select
-                        value={newAttraction.category}
-                        onValueChange={(value) => setNewAttraction({ ...newAttraction, category: value })}
-                      >
-                        <SelectTrigger data-testid="new-attraction-category">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {ATTRACTION_CATEGORIES.map((cat) => (
-                            <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <Input
-                      placeholder="Short description"
-                      value={newAttraction.description}
-                      onChange={(e) => setNewAttraction({ ...newAttraction, description: e.target.value })}
-                      data-testid="new-attraction-description"
-                    />
-                    <div className="grid grid-cols-2 gap-3">
-                      <Input
-                        placeholder="Distance (e.g., 2.5 miles)"
-                        value={newAttraction.distance}
-                        onChange={(e) => setNewAttraction({ ...newAttraction, distance: e.target.value })}
-                        data-testid="new-attraction-distance"
-                      />
-                      <Input
-                        placeholder="Image URL (optional)"
-                        value={newAttraction.image_url}
-                        onChange={(e) => setNewAttraction({ ...newAttraction, image_url: e.target.value })}
-                      />
-                    </div>
-                    <div className="flex gap-2">
-                      <Button onClick={handleCreateAttraction} size="sm" className="gap-2" data-testid="save-new-attraction">
-                        <Check className="w-3 h-3" />
-                        Save
-                      </Button>
-                      <Button onClick={() => setNewAttraction(null)} variant="ghost" size="sm">
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Attractions List */}
-                <div className="space-y-2">
-                  {attractions.map((item) => (
-                    <div 
-                      key={item.id}
-                      className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
-                        item.enabled ? 'border-white/10 bg-card' : 'border-white/5 bg-muted/30 opacity-60'
-                      }`}
-                      data-testid={`attraction-item-${item.id}`}
-                    >
-                      {editingAttraction?.id === item.id ? (
-                        /* Edit Mode */
-                        <div className="flex-1 space-y-2">
-                          <div className="grid grid-cols-2 gap-2">
-                            <Input
-                              value={editingAttraction.name || item.name}
-                              onChange={(e) => setEditingAttraction({ ...editingAttraction, name: e.target.value })}
-                              data-testid={`edit-attraction-name-${item.id}`}
-                            />
-                            <Select
-                              value={editingAttraction.category || item.category}
-                              onValueChange={(value) => setEditingAttraction({ ...editingAttraction, category: value })}
-                            >
-                              <SelectTrigger><SelectValue /></SelectTrigger>
-                              <SelectContent>
-                                {ATTRACTION_CATEGORIES.map((cat) => (
-                                  <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <Input
-                            value={editingAttraction.description || item.description}
-                            onChange={(e) => setEditingAttraction({ ...editingAttraction, description: e.target.value })}
-                            placeholder="Description"
-                          />
-                          <Input
-                            value={editingAttraction.distance || item.distance}
-                            onChange={(e) => setEditingAttraction({ ...editingAttraction, distance: e.target.value })}
-                            placeholder="Distance"
-                          />
-                          <div className="flex gap-2">
-                            <Button onClick={() => handleUpdateAttraction(item.id)} size="sm" className="gap-1">
-                              <Check className="w-3 h-3" />
-                              Save
-                            </Button>
-                            <Button onClick={() => setEditingAttraction(null)} variant="ghost" size="sm">
-                              Cancel
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        /* View Mode */
-                        <>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <p className="font-medium truncate">{item.name}</p>
-                              <span className="text-xs px-2 py-0.5 rounded-full bg-white/10 text-muted-foreground flex-shrink-0">
-                                {ATTRACTION_CATEGORIES.find(c => c.value === item.category)?.label || item.category}
-                              </span>
-                            </div>
-                            <p className="text-sm text-muted-foreground truncate">{item.description}</p>
-                            {item.distance && <p className="text-xs text-muted-foreground mt-0.5">{item.distance}</p>}
-                          </div>
-                          <div className="flex items-center gap-1 flex-shrink-0">
-                            <Button 
-                              variant="ghost" 
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => handleToggleAttraction(item)}
-                              data-testid={`toggle-attraction-${item.id}`}
-                            >
-                              {item.enabled ? <ToggleRight className="w-4 h-4 text-green-400" /> : <ToggleLeft className="w-4 h-4 text-muted-foreground" />}
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => setEditingAttraction({ id: item.id, name: item.name, description: item.description, distance: item.distance, category: item.category })}
-                              data-testid={`edit-attraction-${item.id}`}
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon"
-                              className="h-8 w-8 text-destructive"
-                              onClick={() => handleDeleteAttraction(item.id)}
-                              data-testid={`delete-attraction-${item.id}`}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  ))}
-                  {attractions.length === 0 && (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <MapPin className="w-10 h-10 mx-auto mb-2 opacity-30" />
-                      <p>No attractions yet. Add one above.</p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+            <AttractionsTab settings={settings} setSettings={setSettings} handleSaveSettings={handleSaveSettings} loading={loading} />
           </TabsContent>
+
 
           {/* Events Tab */}
           <TabsContent value="events" className="space-y-6" data-testid="events-tab-content">
@@ -2593,385 +2177,15 @@ function AdminDashboard({ navigate, user, onLogout, showPasswordChange, setShowP
 
           {/* Overlays Tab */}
           <TabsContent value="overlays" className="space-y-6" data-testid="overlays-tab-content">
-            <Card className="bg-card border-white/10">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <Megaphone className="w-5 h-5" />
-                      Overlays & Announcements
-                    </CardTitle>
-                    <CardDescription>Create banner, ticker, or fullscreen announcements that overlay on the lobby display</CardDescription>
-                  </div>
-                  <Button
-                    onClick={() => setNewOverlay({ title: "", message: "", style: "banner", bg_color: "#1e293b", text_color: "#ffffff", enabled: true, priority: 0, start_time: "", end_time: "" })}
-                    data-testid="add-overlay-btn"
-                  >
-                    <Plus className="w-4 h-4 mr-2" /> Add Overlay
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {/* New Overlay Form */}
-                {newOverlay && (
-                  <div className="mb-6 p-4 rounded-xl bg-muted/30 border border-white/10 space-y-4">
-                    <h4 className="font-medium text-sm">New Overlay</h4>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Title</Label>
-                        <Input value={newOverlay.title} onChange={(e) => setNewOverlay(prev => ({ ...prev, title: e.target.value }))} placeholder="e.g. Happy Hour Special" data-testid="new-overlay-title" />
-                      </div>
-                      <div>
-                        <Label>Style</Label>
-                        <Select value={newOverlay.style} onValueChange={(v) => setNewOverlay(prev => ({ ...prev, style: v }))}>
-                          <SelectTrigger data-testid="new-overlay-style"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="banner">Banner (Top)</SelectItem>
-                            <SelectItem value="ticker">Ticker (Scrolling)</SelectItem>
-                            <SelectItem value="corner">Corner (Bottom-right)</SelectItem>
-                            <SelectItem value="fullscreen">Fullscreen</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <div>
-                      <Label>Message</Label>
-                      <Input value={newOverlay.message} onChange={(e) => setNewOverlay(prev => ({ ...prev, message: e.target.value }))} placeholder="Optional detailed message" data-testid="new-overlay-message" />
-                    </div>
-                    <div className="grid grid-cols-3 gap-4">
-                      <div>
-                        <Label>Background Color</Label>
-                        <div className="flex gap-2 items-center">
-                          <input type="color" value={newOverlay.bg_color} onChange={(e) => setNewOverlay(prev => ({ ...prev, bg_color: e.target.value }))} className="w-10 h-10 rounded border border-white/20 cursor-pointer" />
-                          <Input value={newOverlay.bg_color} onChange={(e) => setNewOverlay(prev => ({ ...prev, bg_color: e.target.value }))} className="font-mono text-sm" />
-                        </div>
-                      </div>
-                      <div>
-                        <Label>Text Color</Label>
-                        <div className="flex gap-2 items-center">
-                          <input type="color" value={newOverlay.text_color} onChange={(e) => setNewOverlay(prev => ({ ...prev, text_color: e.target.value }))} className="w-10 h-10 rounded border border-white/20 cursor-pointer" />
-                          <Input value={newOverlay.text_color} onChange={(e) => setNewOverlay(prev => ({ ...prev, text_color: e.target.value }))} className="font-mono text-sm" />
-                        </div>
-                      </div>
-                      <div>
-                        <Label>Priority</Label>
-                        <Input type="number" value={newOverlay.priority} onChange={(e) => setNewOverlay(prev => ({ ...prev, priority: parseInt(e.target.value) || 0 }))} />
-                      </div>
-                    </div>
-                    <div className="flex gap-2 justify-end">
-                      <Button variant="outline" onClick={() => setNewOverlay(null)}>Cancel</Button>
-                      <Button
-                        disabled={!newOverlay.title}
-                        onClick={async () => {
-                          try {
-                            await axios.post(`${API}/overlays`, newOverlay);
-                            setNewOverlay(null);
-                            fetchOverlays();
-                            toast.success("Overlay created");
-                          } catch { toast.error("Failed to create overlay"); }
-                        }}
-                        data-testid="save-new-overlay-btn"
-                      >
-                        <Check className="w-4 h-4 mr-2" /> Save Overlay
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Overlays List */}
-                {overlays.length === 0 && !newOverlay ? (
-                  <div className="text-center py-12 text-muted-foreground">
-                    <Megaphone className="w-12 h-12 mx-auto mb-4 opacity-30" />
-                    <p>No overlays yet. Create one to display announcements on the lobby screen.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {overlays.map((overlay) => (
-                      <div
-                        key={overlay.id}
-                        className="flex items-center gap-4 p-4 rounded-xl bg-muted/20 border border-white/10"
-                        data-testid={`overlay-item-${overlay.id}`}
-                      >
-                        {/* Color preview */}
-                        <div className="w-10 h-10 rounded-lg flex-shrink-0 flex items-center justify-center text-xs font-bold" style={{ backgroundColor: overlay.bg_color, color: overlay.text_color }}>
-                          {overlay.style === "banner" ? "B" : overlay.style === "ticker" ? "T" : overlay.style === "corner" ? "C" : "F"}
-                        </div>
-
-                        {/* Info */}
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate">{overlay.title}</p>
-                          <p className="text-xs text-muted-foreground">{overlay.style} &middot; Priority {overlay.priority}</p>
-                        </div>
-
-                        {/* Toggle enabled */}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={async () => {
-                            try {
-                              await axios.put(`${API}/overlays/${overlay.id}`, { enabled: !overlay.enabled });
-                              fetchOverlays();
-                            } catch { toast.error("Failed to toggle overlay"); }
-                          }}
-                          data-testid={`toggle-overlay-${overlay.id}`}
-                        >
-                          {overlay.enabled ? <ToggleRight className="w-5 h-5 text-green-400" /> : <ToggleLeft className="w-5 h-5 text-muted-foreground" />}
-                        </Button>
-
-                        {/* Delete */}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={async () => {
-                            try {
-                              await axios.delete(`${API}/overlays/${overlay.id}`);
-                              fetchOverlays();
-                              toast.success("Overlay deleted");
-                            } catch { toast.error("Failed to delete overlay"); }
-                          }}
-                          data-testid={`delete-overlay-${overlay.id}`}
-                        >
-                          <Trash2 className="w-4 h-4 text-red-400" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <OverlaysTab />
           </TabsContent>
+
 
           {/* Videos Tab */}
           <TabsContent value="videos" className="space-y-6" data-testid="videos-tab-content">
-            <Card className="bg-card border-white/10">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <Film className="w-5 h-5" />
-                      Videos & Commercials
-                    </CardTitle>
-                    <CardDescription>Upload and manage video content for the lobby slideshow</CardDescription>
-                  </div>
-                  <Button
-                    onClick={() => setNewVideo({ title: "", description: "", start_date: "", end_date: "", active: true, featured: false, mute: true, autoplay: true, loop: false, show_controls: false, frequency: 1 })}
-                    className="gap-2"
-                    data-testid="add-video-button"
-                  >
-                    <Plus className="w-4 h-4" /> Add Video
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* New Video Form */}
-                {newVideo && (
-                  <Card className="bg-primary/5 border-primary/20">
-                    <CardContent className="pt-6 space-y-4">
-                      <div className="grid gap-4 md:grid-cols-2">
-                        <div className="space-y-2">
-                          <Label>Title *</Label>
-                          <Input value={newVideo.title} onChange={(e) => setNewVideo(prev => ({ ...prev, title: e.target.value }))} placeholder="e.g. Hotel Welcome Video" data-testid="new-video-title" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Frequency (every N cycles)</Label>
-                          <Input type="number" min="1" max="10" value={newVideo.frequency} onChange={(e) => setNewVideo(prev => ({ ...prev, frequency: parseInt(e.target.value) || 1 }))} data-testid="new-video-frequency" />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Description</Label>
-                        <Input value={newVideo.description} onChange={(e) => setNewVideo(prev => ({ ...prev, description: e.target.value }))} placeholder="Optional description" data-testid="new-video-description" />
-                      </div>
-                      <div className="grid gap-4 md:grid-cols-2">
-                        <div className="space-y-2">
-                          <Label>Start Date</Label>
-                          <Input type="date" value={newVideo.start_date} onChange={(e) => setNewVideo(prev => ({ ...prev, start_date: e.target.value }))} data-testid="new-video-start-date" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>End Date</Label>
-                          <Input type="date" value={newVideo.end_date} onChange={(e) => setNewVideo(prev => ({ ...prev, end_date: e.target.value }))} data-testid="new-video-end-date" />
-                        </div>
-                      </div>
-                      <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
-                        <div className="flex items-center gap-2">
-                          <Switch checked={newVideo.mute} onCheckedChange={(v) => setNewVideo(prev => ({ ...prev, mute: v }))} />
-                          <Label className="text-sm">{newVideo.mute ? <VolumeX className="w-4 h-4 inline" /> : <Volume2 className="w-4 h-4 inline" />} Muted</Label>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Switch checked={newVideo.autoplay} onCheckedChange={(v) => setNewVideo(prev => ({ ...prev, autoplay: v }))} />
-                          <Label className="text-sm"><Play className="w-4 h-4 inline" /> Autoplay</Label>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Switch checked={newVideo.loop} onCheckedChange={(v) => setNewVideo(prev => ({ ...prev, loop: v }))} />
-                          <Label className="text-sm"><Repeat className="w-4 h-4 inline" /> Loop</Label>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Switch checked={newVideo.featured} onCheckedChange={(v) => setNewVideo(prev => ({ ...prev, featured: v }))} />
-                          <Label className="text-sm"><Star className="w-4 h-4 inline" /> Featured</Label>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          disabled={!newVideo.title}
-                          onClick={async () => {
-                            try {
-                              await axios.post(`${API}/videos`, newVideo);
-                              setNewVideo(null);
-                              fetchVideos();
-                              toast.success("Video entry created — now upload the video file");
-                            } catch { toast.error("Failed to create video"); }
-                          }}
-                          data-testid="save-new-video"
-                        >
-                          Create Video Entry
-                        </Button>
-                        <Button variant="outline" onClick={() => setNewVideo(null)}>Cancel</Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Video List */}
-                {videos.length === 0 && !newVideo ? (
-                  <div className="text-center py-12 text-muted-foreground">
-                    <Film className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                    <p>No videos yet. Click "Add Video" to get started.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {videos.map((video) => (
-                      <Card key={video.id} className={`border-white/10 ${!video.active ? "opacity-50" : ""} ${video.is_expired ? "border-red-500/30" : ""}`} data-testid={`video-card-${video.id}`}>
-                        <CardContent className="pt-4">
-                          <div className="flex gap-4">
-                            {/* Thumbnail / Video Preview */}
-                            <div className="w-40 h-24 rounded-lg bg-black/40 border border-white/10 overflow-hidden flex-shrink-0 flex items-center justify-center">
-                              {video.thumbnail_url ? (
-                                <img src={video.thumbnail_url} alt={video.title} className="w-full h-full object-cover" />
-                              ) : video.video_url ? (
-                                <video src={video.video_url} className="w-full h-full object-cover" muted preload="metadata" />
-                              ) : (
-                                <Film className="w-8 h-8 text-white/20" />
-                              )}
-                            </div>
-
-                            {/* Info */}
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <h3 className="font-semibold truncate">{video.title}</h3>
-                                {video.featured && <Star className="w-4 h-4 text-amber-400 flex-shrink-0" />}
-                                {video.is_expired && <span className="text-xs text-red-400 bg-red-500/10 px-2 py-0.5 rounded">Expired</span>}
-                                {video.is_scheduled && <span className="text-xs text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded">Scheduled</span>}
-                              </div>
-                              {video.description && <p className="text-sm text-muted-foreground truncate">{video.description}</p>}
-                              <div className="flex gap-3 mt-2 text-xs text-muted-foreground">
-                                {video.start_date && <span>From: {video.start_date}</span>}
-                                {video.end_date && <span>Until: {video.end_date}</span>}
-                                <span>Freq: every {video.frequency || 1} cycle{(video.frequency || 1) > 1 ? "s" : ""}</span>
-                                <span className="flex items-center gap-1">{video.mute ? <VolumeX className="w-3 h-3" /> : <Volume2 className="w-3 h-3" />}{video.mute ? "Muted" : "Sound"}</span>
-                                {video.loop && <span className="flex items-center gap-1"><Repeat className="w-3 h-3" />Loop</span>}
-                              </div>
-                            </div>
-
-                            {/* Actions */}
-                            <div className="flex items-center gap-2 flex-shrink-0">
-                              {/* Upload Video File */}
-                              <label className="cursor-pointer">
-                                <input
-                                  type="file"
-                                  accept="video/*"
-                                  className="hidden"
-                                  onChange={async (e) => {
-                                    const file = e.target.files?.[0];
-                                    if (!file) return;
-                                    setVideoUploading(true);
-                                    const formData = new FormData();
-                                    formData.append("file", file);
-                                    try {
-                                      await axios.post(`${API}/videos/${video.id}/upload`, formData, { headers: { "Content-Type": "multipart/form-data" }, timeout: 300000 });
-                                      fetchVideos();
-                                      toast.success("Video file uploaded");
-                                    } catch { toast.error("Video upload failed"); }
-                                    finally { setVideoUploading(false); }
-                                  }}
-                                  data-testid={`upload-video-file-${video.id}`}
-                                />
-                                <Button variant="outline" size="sm" asChild className="gap-1" disabled={videoUploading}>
-                                  <span><Upload className="w-3.5 h-3.5" />{video.video_url ? "Replace" : "Upload"}</span>
-                                </Button>
-                              </label>
-
-                              {/* Upload Thumbnail */}
-                              <label className="cursor-pointer">
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  className="hidden"
-                                  onChange={async (e) => {
-                                    const file = e.target.files?.[0];
-                                    if (!file) return;
-                                    const formData = new FormData();
-                                    formData.append("file", file);
-                                    try {
-                                      await axios.post(`${API}/videos/${video.id}/thumbnail`, formData, { headers: { "Content-Type": "multipart/form-data" } });
-                                      fetchVideos();
-                                      toast.success("Thumbnail uploaded");
-                                    } catch { toast.error("Thumbnail upload failed"); }
-                                  }}
-                                  data-testid={`upload-thumbnail-${video.id}`}
-                                />
-                                <Button variant="outline" size="sm" asChild className="gap-1">
-                                  <span><ImagePlus className="w-3.5 h-3.5" />Thumb</span>
-                                </Button>
-                              </label>
-
-                              {/* Toggle Active */}
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={async () => {
-                                  try {
-                                    await axios.put(`${API}/videos/${video.id}`, { active: !video.active });
-                                    fetchVideos();
-                                    toast.success(video.active ? "Video deactivated" : "Video activated");
-                                  } catch { toast.error("Failed to toggle"); }
-                                }}
-                                data-testid={`toggle-video-${video.id}`}
-                              >
-                                {video.active ? <ToggleRight className="w-5 h-5 text-green-400" /> : <ToggleLeft className="w-5 h-5 text-gray-400" />}
-                              </Button>
-
-                              {/* Delete */}
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={async () => {
-                                  if (!window.confirm("Delete this video?")) return;
-                                  try {
-                                    await axios.delete(`${API}/videos/${video.id}`);
-                                    fetchVideos();
-                                    toast.success("Video deleted");
-                                  } catch { toast.error("Failed to delete video"); }
-                                }}
-                                data-testid={`delete-video-${video.id}`}
-                              >
-                                <Trash2 className="w-4 h-4 text-red-400" />
-                              </Button>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-
-                {videoUploading && (
-                  <div className="text-center py-4 text-primary">
-                    <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2" />
-                    <p className="text-sm">Uploading video... This may take a moment.</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <VideosTab />
           </TabsContent>
+
 
         </Tabs>
       </main>

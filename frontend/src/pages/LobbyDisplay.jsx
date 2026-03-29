@@ -5,6 +5,7 @@ import { getWeatherTheme } from "../components/WeatherBackground";
 import WeatherSlide from "../components/WeatherSlide";
 import LocalAttractionsSlide from "../components/LocalAttractionsSlide";
 import EventsSlide from "../components/EventsSlide";
+import ContentSlide from "../components/ContentSlide";
 import PhotoSlide from "../components/lobby/PhotoSlide";
 import VideoSlide from "../components/lobby/VideoSlide";
 import SlideIndicators from "../components/lobby/SlideIndicators";
@@ -13,11 +14,17 @@ import OverlayDisplay from "../components/lobby/OverlayDisplay";
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-// Small hotel logo overlay — shown on every slide
-const LogoOverlay = ({ logoUrl }) => {
+// Logo overlay is now handled inside PhotoSlide via widget_positions
+// For non-photo slides, show logo at its positioned location
+const LogoOverlay = ({ logoUrl, positions }) => {
   if (!logoUrl) return null;
+  const pos = positions?.logo || { x: 3, y: 3 };
   return (
-    <div className="absolute top-4 left-4 z-[10]" data-testid="hotel-logo-overlay">
+    <div
+      className="absolute z-[10]"
+      style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
+      data-testid="hotel-logo-overlay"
+    >
       <img
         src={logoUrl}
         alt="Hotel Logo"
@@ -34,6 +41,7 @@ const SLIDE_TYPES = {
   ATTRACTIONS: 'attractions',
   EVENTS: 'events',
   VIDEO: 'video',
+  CONTENT: 'content',
 };
 
 export default function LobbyDisplay() {
@@ -65,6 +73,7 @@ export default function LobbyDisplay() {
   const [activeOverlays, setActiveOverlays] = useState([]);
   const [videos, setVideos] = useState([]);
   const [videoCycleCount, setVideoCycleCount] = useState(0);
+  const [contentSections, setContentSections] = useState({});
 
   const currentTheme = useMemo(() => {
     if (!weather) return "sunny";
@@ -102,11 +111,22 @@ export default function LobbyDisplay() {
   const fetchVideos = useCallback(async () => {
     try { setVideos((await axios.get(`${API}/videos`, { params: { active_only: true } })).data); } catch (e) { console.error("Videos fetch error:", e); }
   }, []);
+  const fetchContent = useCallback(async () => {
+    const types = ["announcement", "promotion", "welcome_message", "amenity", "emergency", "checkout_reminder"];
+    const sections = {};
+    for (const type of types) {
+      try {
+        const data = (await axios.get(`${API}/content/${type}`)).data;
+        if (data.length > 0) sections[type] = data.filter(item => item.enabled);
+      } catch (e) { /* skip */ }
+    }
+    setContentSections(sections);
+  }, []);
 
   // Initial fetch
   useEffect(() => {
-    fetchSettings(); fetchImages(); fetchWeather(); fetchNews(); fetchAttractions(); fetchLocalEvents(); fetchOverlays(); fetchVideos();
-  }, [fetchSettings, fetchImages, fetchWeather, fetchNews, fetchAttractions, fetchLocalEvents, fetchOverlays, fetchVideos]);
+    fetchSettings(); fetchImages(); fetchWeather(); fetchNews(); fetchAttractions(); fetchLocalEvents(); fetchOverlays(); fetchVideos(); fetchContent();
+  }, [fetchSettings, fetchImages, fetchWeather, fetchNews, fetchAttractions, fetchLocalEvents, fetchOverlays, fetchVideos, fetchContent]);
 
   // Build slide queue
   useEffect(() => {
@@ -144,16 +164,24 @@ export default function LobbyDisplay() {
         return videoCycleCount % freq === 0;
       });
       activeVids.forEach((vid, i) => {
-        // Use 120s max duration — video onEnded will advance sooner
         const vidSlide = { type: SLIDE_TYPES.VIDEO, data: vid, id: `video-${vid.id}`, duration: 120 * 1000 };
-        // Insert videos spread throughout the slideshow
         const insertAt = Math.min(3 + (i * 4), newSlides.length);
         newSlides.splice(insertAt, 0, vidSlide);
       });
     }
 
+    // Insert content section slides
+    const contentTypes = Object.keys(contentSections);
+    contentTypes.forEach((type, i) => {
+      const items = contentSections[type];
+      if (items && items.length > 0) {
+        const insertAt = Math.min(4 + (i * 3), newSlides.length);
+        newSlides.splice(insertAt, 0, { type: SLIDE_TYPES.CONTENT, data: { items, sectionType: type }, id: `content-${type}`, duration: Math.max(8, items.length * 6) * 1000 });
+      }
+    });
+
     setSlides(newSlides);
-  }, [images, videos, videoCycleCount, settings.photo_interval, settings.weather_slide_duration]);
+  }, [images, videos, videoCycleCount, contentSections, settings.photo_interval, settings.weather_slide_duration]);
 
   // Slide auto-advance (skip timer for video slides — they advance on video end)
   useEffect(() => {
@@ -222,6 +250,8 @@ export default function LobbyDisplay() {
               <EventsSlide weather={weather} currentTime={currentTime} isPortrait={isPortrait} events={localEvents} maxItems={settings.events_per_slide || 8} />
             ) : currentSlide.type === SLIDE_TYPES.VIDEO ? (
               <VideoSlide video={currentSlide.data} onVideoEnd={advanceSlide} isPortrait={isPortrait} />
+            ) : currentSlide.type === SLIDE_TYPES.CONTENT ? (
+              <ContentSlide items={currentSlide.data.items} sectionType={currentSlide.data.sectionType} weather={weather} isPortrait={isPortrait} />
             ) : (
               <PhotoSlide
                 image={currentSlide.data}
@@ -238,7 +268,7 @@ export default function LobbyDisplay() {
         )}
       </AnimatePresence>
 
-      <LogoOverlay logoUrl={settings.logo_url} />
+      <LogoOverlay logoUrl={settings.logo_url} positions={settings.widget_positions} />
       <SlideIndicators slides={slides} currentSlideIndex={currentSlideIndex} />
       <OverlayDisplay overlays={activeOverlays} />
     </div>

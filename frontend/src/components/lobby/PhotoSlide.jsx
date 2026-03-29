@@ -32,30 +32,17 @@ export default function PhotoSlide({
   getImageUrl,
 }) {
   const padding = settings.widget_padding || 48;
-  const gap = settings.widget_spacing || 16;
   const wScale = settings.widget_scale || 1;
   const currentHeadline = headlines[currentHeadlineIndex];
 
-  // Widget positions (percentage-based grid positions)
-  const positions = settings.widget_positions || {
-    hotel_name: { x: 0, y: 0 },
-    clock: { x: 100, y: 0 },
-    weather: { x: 0, y: 100 },
-    news: { x: 100, y: 100 },
+  // Widget positions — continuous percentages (0-100)
+  const defaultPos = {
+    logo: { x: 3, y: 3 },
+    clock: { x: 85, y: 3 },
+    weather: { x: 3, y: 80 },
+    news: { x: 55, y: 85 },
   };
-
-  // Map position to CSS
-  const positionStyle = (pos) => {
-    const style = {};
-    if (pos.x === 0) { style.left = 0; style.alignItems = 'flex-start'; }
-    else if (pos.x === 50) { style.left = '50%'; style.transform = 'translateX(-50%)'; style.alignItems = 'center'; }
-    else { style.right = 0; style.alignItems = 'flex-end'; }
-    if (pos.y === 0) style.top = 0;
-    else style.bottom = 0;
-    return style;
-  };
-
-  const textAlign = (pos) => pos.x === 0 ? 'text-left' : pos.x === 50 ? 'text-center' : 'text-right';
+  const positions = { ...defaultPos, ...settings.widget_positions };
 
   return (
     <div className="w-full h-full relative" data-testid="photo-slide">
@@ -75,34 +62,36 @@ export default function PhotoSlide({
         <EmptyPhotoState theme={currentTheme} />
       )}
 
-      {/* Subtle gradient overlays — minimal to keep photo visible */}
+      {/* Subtle gradient overlays */}
       <div className="absolute inset-0 z-[2] pointer-events-none">
         <div className="absolute bottom-0 left-0 right-0 h-[30%] bg-gradient-to-t from-black/30 to-transparent" />
         <div className="absolute top-0 left-0 right-0 h-[15%] bg-gradient-to-b from-black/20 to-transparent" />
       </div>
 
-      {/* Positioned widgets */}
+      {/* Free-positioned widgets */}
       <div className="absolute inset-0 z-[3]" style={{ padding }}>
-        {/* Hotel Name */}
-        {settings.hotel_name && (
+        {/* Logo */}
+        {settings.logo_url && (
           <motion.div
-            className={`absolute flex flex-col ${textAlign(positions.hotel_name)}`}
-            style={positionStyle(positions.hotel_name)}
+            className="absolute"
+            style={{ left: `${positions.logo.x}%`, top: `${positions.logo.y}%` }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.8 }}
           >
-            <h1 className={`${isPortrait ? 'text-lg' : 'text-xl'} font-serif font-bold text-white tracking-[0.2em] uppercase drop-shadow-lg`}>
-              {settings.hotel_name}
-            </h1>
-            <p className="text-white/60 text-xs tracking-wider mt-0.5">Welcome</p>
+            <img
+              src={settings.logo_url}
+              alt="Logo"
+              className="h-12 w-auto max-w-[120px] object-contain drop-shadow-lg"
+              style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.5))' }}
+            />
           </motion.div>
         )}
 
         {/* Clock */}
         <motion.div
-          className={`absolute flex flex-col ${textAlign(positions.clock)}`}
-          style={positionStyle(positions.clock)}
+          className="absolute"
+          style={{ left: `${positions.clock.x}%`, top: `${positions.clock.y}%` }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.8, delay: 0.1 }}
@@ -114,8 +103,8 @@ export default function PhotoSlide({
         {/* Weather */}
         <motion.div
           className="absolute"
-          style={{ ...positionStyle(positions.weather), maxWidth: isPortrait ? '48%' : '45%', transform: `scale(${wScale})`, transformOrigin: `${positions.weather.x === 0 ? 'left' : positions.weather.x === 100 ? 'right' : 'center'} ${positions.weather.y === 0 ? 'top' : 'bottom'}` }}
-          initial={{ opacity: 0, y: positions.weather.y === 0 ? -20 : 20 }}
+          style={{ left: `${positions.weather.x}%`, top: `${positions.weather.y}%`, maxWidth: isPortrait ? '48%' : '45%', transform: `scale(${wScale})`, transformOrigin: 'top left' }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
         >
@@ -125,8 +114,8 @@ export default function PhotoSlide({
         {/* News */}
         <motion.div
           className="absolute"
-          style={{ ...positionStyle(positions.news), maxWidth: isPortrait ? '48%' : '45%', transform: `scale(${wScale})`, transformOrigin: `${positions.news.x === 0 ? 'left' : positions.news.x === 100 ? 'right' : 'center'} ${positions.news.y === 0 ? 'top' : 'bottom'}` }}
-          initial={{ opacity: 0, y: positions.news.y === 0 ? -20 : 20 }}
+          style={{ left: `${positions.news.x}%`, top: `${positions.news.y}%`, maxWidth: isPortrait ? '48%' : '45%', transform: `scale(${wScale})`, transformOrigin: 'top left' }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.4 }}
         >
