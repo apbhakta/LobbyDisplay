@@ -75,6 +75,12 @@ Build a premium fullscreen hotel lobby display web app in Clifton, Texas for a T
 - [x] PhotoSlide responsive sizing: 90% maxWidth in portrait, 45% in landscape
 - [x] Reduced padding in portrait mode to prevent widget clipping
 
+### Phase 18: Widget Overlap Bug Fix (Completed Mar 2026)
+- [x] Root cause: admin drag canvas used center-point positioning (translate -50%,-50%) but display used edge-based smart anchoring — positions didn't match
+- [x] Unified center-point positioning everywhere (PhotoSlide, LogoOverlay, WidgetPositionPanel)
+- [x] Default positions use corners for both orientations (portrait: 10/85%, landscape: 5/90%)
+- [x] Positions auto-reset to orientation-appropriate corners on orientation/aspect change
+
 ### Admin Panel (8 tabs)
 - Images, Attractions, Events, Content, Settings, Display, Overlays, Videos
 
