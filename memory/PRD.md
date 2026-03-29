@@ -66,6 +66,15 @@ Build a premium fullscreen hotel lobby display web app in Clifton, Texas for a T
 - [x] PhotoSlide uses visibility/colors/glass from settings
 - [x] LogoOverlay respects visibility.logo and glass_effect on non-photo slides
 
+### Phase 17: Orientation-Responsive Widget Alignment (Completed Mar 2026)
+- [x] Widget positions auto-reset to orientation-appropriate defaults when aspect ratio or orientation changes
+- [x] Portrait mode: widgets centered horizontally (logo top-center, clock below, weather + news bottom-center)
+- [x] Landscape mode: widgets at corners (logo top-left, clock top-right, weather bottom-left, news bottom-right)
+- [x] WidgetPositionPanel canvas uses actual display width/height for accurate aspect ratio
+- [x] Reset Positions button added to Widget Positioning panel
+- [x] PhotoSlide responsive sizing: 90% maxWidth in portrait, 45% in landscape
+- [x] Reduced padding in portrait mode to prevent widget clipping
+
 ### Admin Panel (8 tabs)
 - Images, Attractions, Events, Content, Settings, Display, Overlays, Videos
 
