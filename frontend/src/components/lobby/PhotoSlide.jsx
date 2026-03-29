@@ -3,6 +3,7 @@ import { Camera } from "lucide-react";
 import WeatherBackground from "../WeatherBackground";
 import { LiveClock, DateDisplay } from "./ClockWidgets";
 import { WeatherWidget, NewsHeadline } from "./InfoWidgets";
+import { GlassPanel } from "./GlassPanel";
 
 // Empty state when no images uploaded
 const EmptyPhotoState = ({ theme }) => (
@@ -34,6 +35,20 @@ export default function PhotoSlide({
   const padding = settings.widget_padding || 48;
   const wScale = settings.widget_scale || 1;
   const currentHeadline = headlines[currentHeadlineIndex];
+
+  // Widget visibility, colors, and glass effect from settings
+  const visibility = {
+    logo: settings.widget_visibility?.logo !== false,
+    clock: settings.widget_visibility?.clock !== false,
+    weather: settings.widget_visibility?.weather !== false,
+    news: settings.widget_visibility?.news !== false,
+  };
+  const colors = {
+    clock: settings.widget_colors?.clock || "#ffffff",
+    weather: settings.widget_colors?.weather || "#ffffff",
+    news: settings.widget_colors?.news || "#ffffff",
+  };
+  const glass = settings.glass_effect !== false;
 
   // Widget positions — smart anchoring
   // x <= 50: left-anchored, x > 50: right-anchored

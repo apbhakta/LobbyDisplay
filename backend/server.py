@@ -190,6 +190,12 @@ class SettingsUpdate(BaseModel):
     events_sort_by: Optional[str] = None
     widget_positions: Optional[dict] = None
     logo_url: Optional[str] = None
+    widget_visibility: Optional[dict] = None
+    widget_colors: Optional[dict] = None
+    clock_style: Optional[str] = None
+    clock_format: Optional[str] = None
+    font_style: Optional[str] = None
+    glass_effect: Optional[bool] = None
 
 class HotelImage(BaseModel):
     model_config = ConfigDict(extra="ignore")

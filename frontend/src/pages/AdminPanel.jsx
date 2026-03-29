@@ -50,7 +50,11 @@ import {
   Timer,
   Lock,
   KeyRound,
-  Film
+  Film,
+  Palette,
+  Paintbrush,
+  Type,
+  EyeOff
 } from "lucide-react";
 import WidgetPositionPanel from "../components/admin/WidgetPositionPanel";
 import AttractionsTab from "../components/admin/AttractionsTab";
@@ -2039,6 +2043,158 @@ function AdminDashboard({ navigate, user, onLogout, showPasswordChange, setShowP
 
                 {/* Widget Positioning */}
                 <WidgetPositionPanel settings={settings} setSettings={setSettings} onSave={handleSaveSettings} />
+
+                {/* Widget Customization */}
+                <Card className="bg-card border-white/10">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Paintbrush className="w-5 h-5" />
+                      Widget Customization
+                    </CardTitle>
+                    <CardDescription>Toggle visibility, glass effect, clock styles, and widget colors</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {/* Widget Visibility */}
+                    <div className="space-y-3">
+                      <Label className="text-sm font-medium flex items-center gap-2">
+                        <Eye className="w-4 h-4" />
+                        Widget Visibility
+                      </Label>
+                      <div className="grid grid-cols-2 gap-3">
+                        {[
+                          { key: "logo", label: "Logo", icon: ImageIcon },
+                          { key: "clock", label: "Clock", icon: Clock },
+                          { key: "weather", label: "Weather", icon: CloudSun },
+                          { key: "news", label: "News", icon: Newspaper },
+                        ].map(({ key, label, icon: Icon }) => (
+                          <div key={key} className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-white/5" data-testid={`visibility-toggle-${key}`}>
+                            <div className="flex items-center gap-2">
+                              <Icon className="w-4 h-4 text-muted-foreground" />
+                              <span className="text-sm">{label}</span>
+                            </div>
+                            <Switch
+                              checked={(settings.widget_visibility || {})[key] !== false}
+                              onCheckedChange={(checked) => {
+                                const current = settings.widget_visibility || { logo: true, clock: true, weather: true, news: true };
+                                setSettings(prev => ({ ...prev, widget_visibility: { ...current, [key]: checked } }));
+                              }}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Glass Effect */}
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-white/5" data-testid="glass-effect-toggle">
+                      <div>
+                        <Label className="text-sm font-medium">Glass Effect</Label>
+                        <p className="text-xs text-muted-foreground mt-0.5">Glassmorphism backdrop blur on all widgets</p>
+                      </div>
+                      <Switch
+                        checked={settings.glass_effect !== false}
+                        onCheckedChange={(checked) => setSettings(prev => ({ ...prev, glass_effect: checked }))}
+                      />
+                    </div>
+
+                    {/* Clock Style & Font */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm flex items-center gap-2">
+                          <Clock className="w-4 h-4" />
+                          Clock Style
+                        </Label>
+                        <Select
+                          value={settings.clock_style || "digital"}
+                          onValueChange={(value) => setSettings(prev => ({ ...prev, clock_style: value }))}
+                        >
+                          <SelectTrigger data-testid="clock-style-select">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="digital">Digital</SelectItem>
+                            <SelectItem value="minimal">Minimal</SelectItem>
+                            <SelectItem value="large">Large</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm flex items-center gap-2">
+                          <Type className="w-4 h-4" />
+                          Clock Font
+                        </Label>
+                        <Select
+                          value={settings.font_style || "modern"}
+                          onValueChange={(value) => setSettings(prev => ({ ...prev, font_style: value }))}
+                        >
+                          <SelectTrigger data-testid="clock-font-select">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="modern">Modern (Sans)</SelectItem>
+                            <SelectItem value="classic">Classic (Serif)</SelectItem>
+                            <SelectItem value="mono">Monospace</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    {/* Clock Format */}
+                    <div className="space-y-2">
+                      <Label className="text-sm">Clock Format</Label>
+                      <Select
+                        value={settings.clock_format || "12h"}
+                        onValueChange={(value) => setSettings(prev => ({ ...prev, clock_format: value }))}
+                      >
+                        <SelectTrigger className="w-[180px]" data-testid="clock-format-select">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="12h">12-Hour (AM/PM)</SelectItem>
+                          <SelectItem value="24h">24-Hour</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Widget Colors */}
+                    <div className="space-y-3">
+                      <Label className="text-sm font-medium flex items-center gap-2">
+                        <Palette className="w-4 h-4" />
+                        Widget Colors
+                      </Label>
+                      <div className="grid grid-cols-3 gap-3">
+                        {[
+                          { key: "clock", label: "Clock" },
+                          { key: "weather", label: "Weather" },
+                          { key: "news", label: "News" },
+                        ].map(({ key, label }) => (
+                          <div key={key} className="space-y-2 p-3 rounded-lg bg-muted/50 border border-white/5" data-testid={`color-picker-${key}`}>
+                            <Label className="text-xs">{label} Color</Label>
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="color"
+                                value={(settings.widget_colors || {})[key] || "#ffffff"}
+                                onChange={(e) => {
+                                  const current = settings.widget_colors || { clock: "#ffffff", weather: "#ffffff", news: "#ffffff" };
+                                  setSettings(prev => ({ ...prev, widget_colors: { ...current, [key]: e.target.value } }));
+                                }}
+                                className="w-8 h-8 rounded cursor-pointer border border-white/20 bg-transparent"
+                              />
+                              <Input
+                                value={(settings.widget_colors || {})[key] || "#ffffff"}
+                                onChange={(e) => {
+                                  const current = settings.widget_colors || { clock: "#ffffff", weather: "#ffffff", news: "#ffffff" };
+                                  setSettings(prev => ({ ...prev, widget_colors: { ...current, [key]: e.target.value } }));
+                                }}
+                                className="h-8 text-xs font-mono"
+                                data-testid={`color-input-${key}`}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
 
                 {/* Widget Sizing & Spacing */}
                 <Card className="bg-card border-white/10">

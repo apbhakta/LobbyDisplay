@@ -16,26 +16,34 @@ const API = `${BACKEND_URL}/api`;
 
 // Logo overlay is now handled inside PhotoSlide via widget_positions
 // For non-photo slides, show logo at its positioned location
-const LogoOverlay = ({ logoUrl, positions }) => {
+const LogoOverlay = ({ logoUrl, positions, visibility, glassEffect }) => {
   if (!logoUrl) return null;
+  if (visibility?.logo === false) return null;
   const pos = positions?.logo || { x: 0, y: 0 };
   const style = {};
   if (pos.x <= 50) style.left = `${pos.x}%`;
   else style.right = `${100 - pos.x}%`;
   if (pos.y <= 50) style.top = `${pos.y}%`;
   else style.bottom = `${100 - pos.y}%`;
+  const glass = glassEffect !== false;
   return (
     <div
       className="absolute z-[10]"
       style={style}
       data-testid="hotel-logo-overlay"
     >
-      <img
-        src={logoUrl}
-        alt="Hotel Logo"
-        className="h-12 w-auto max-w-[120px] object-contain drop-shadow-lg"
-        style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.5))' }}
-      />
+      {glass ? (
+        <div className="rounded-2xl backdrop-blur-md border border-white/10 bg-black/20 p-2">
+          <img src={logoUrl} alt="Hotel Logo" className="h-10 w-auto max-w-[110px] object-contain" />
+        </div>
+      ) : (
+        <img
+          src={logoUrl}
+          alt="Hotel Logo"
+          className="h-12 w-auto max-w-[120px] object-contain drop-shadow-lg"
+          style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.5))' }}
+        />
+      )}
     </div>
   );
 };
@@ -272,7 +280,7 @@ export default function LobbyDisplay() {
         )}
       </AnimatePresence>
 
-      <LogoOverlay logoUrl={settings.logo_url} positions={settings.widget_positions} />
+      <LogoOverlay logoUrl={settings.logo_url} positions={settings.widget_positions} visibility={settings.widget_visibility} glassEffect={settings.glass_effect} />
       <SlideIndicators slides={slides} currentSlideIndex={currentSlideIndex} />
       <OverlayDisplay overlays={activeOverlays} />
     </div>
