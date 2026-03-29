@@ -81,6 +81,14 @@ Build a premium fullscreen hotel lobby display web app in Clifton, Texas for a T
 - [x] Default positions use corners for both orientations (portrait: 10/85%, landscape: 5/90%)
 - [x] Positions auto-reset to orientation-appropriate corners on orientation/aspect change
 
+### Phase 19: Persistent Widgets & Aspect Ratio Fix (Completed Mar 2026)
+- [x] Moved all 4 corner widgets (Logo, Clock, Weather, News) from PhotoSlide to LobbyDisplay as persistent overlays — visible on ALL slide types
+- [x] Lobby container now applies CSS `aspect-ratio` from admin settings (display_width / display_height)
+- [x] Changing aspect ratio in admin now actually affects the lobby display
+- [x] Added 30s settings auto-refresh so admin changes appear on lobby without manual reload
+- [x] Simplified PhotoSlide — no longer handles widgets (purely image display)
+- [x] Default aspect set to 3:4 portrait (7.5 x 10) per user preference
+
 ### Admin Panel (8 tabs)
 - Images, Attractions, Events, Content, Settings, Display, Overlays, Videos
 
