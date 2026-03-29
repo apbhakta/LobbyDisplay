@@ -21,12 +21,16 @@ const LogoOverlay = ({ logoUrl, positions, visibility, glassEffect }) => {
   if (visibility?.logo === false) return null;
   const pos = positions?.logo || { x: 5, y: 5 };
   const glass = glassEffect !== false;
-  // Center-point positioning — matches the drag canvas and PhotoSlide exactly
-  const style = {
-    left: `${Math.max(2, Math.min(98, pos.x))}%`,
-    top: `${Math.max(2, Math.min(98, pos.y))}%`,
-    transform: 'translate(-50%, -50%)',
-  };
+  // Edge-aware positioning — anchors to nearest edge to prevent cutoff
+  const x = Math.max(1, Math.min(99, pos.x));
+  const y = Math.max(1, Math.min(99, pos.y));
+  const style = {};
+  if (x <= 20) { style.left = `${x}%`; }
+  else if (x >= 80) { style.right = `${100 - x}%`; }
+  else { style.left = `${x}%`; style.transform = 'translateX(-50%)'; }
+  if (y <= 20) { style.top = `${y}%`; }
+  else if (y >= 80) { style.bottom = `${100 - y}%`; }
+  else { style.top = `${y}%`; style.transform = (style.transform || '') + ' translateY(-50%)'; }
   return (
     <div
       className="absolute z-[10]"
