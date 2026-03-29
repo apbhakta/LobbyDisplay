@@ -10,37 +10,23 @@ import PhotoSlide from "../components/lobby/PhotoSlide";
 import VideoSlide from "../components/lobby/VideoSlide";
 import SlideIndicators from "../components/lobby/SlideIndicators";
 import OverlayDisplay from "../components/lobby/OverlayDisplay";
+import { LiveClock, DateDisplay } from "../components/lobby/ClockWidgets";
+import { WeatherWidget, NewsHeadline } from "../components/lobby/InfoWidgets";
+import { GlassPanel } from "../components/lobby/GlassPanel";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-// Logo overlay is now handled inside PhotoSlide via widget_positions
-// For non-photo slides, show logo at its positioned location
-const LogoOverlay = ({ logoUrl, positions, visibility, glassEffect }) => {
-  if (!logoUrl) return null;
-  if (visibility?.logo === false) return null;
-  const pos = positions?.logo || { x: 2, y: 2 };
-  const glass = glassEffect !== false;
-  // Corner-aware: pins to nearest edge
-  const style = {};
+// Corner-aware widget positioning: pins widget edges to nearest screen edge
+const cornerStyle = (pos, extraPad = 14) => {
+  const style = { padding: extraPad };
   if (pos.x <= 25) { style.left = 0; }
   else if (pos.x >= 75) { style.right = 0; }
   else { style.left = `${pos.x}%`; style.transform = 'translateX(-50%)'; }
   if (pos.y <= 25) { style.top = 0; }
   else if (pos.y >= 75) { style.bottom = 0; }
   else { style.top = `${pos.y}%`; style.transform = (style.transform || '') + ' translateY(-50%)'; }
-  style.padding = 14;
-  return (
-    <div className="absolute z-[10]" style={style} data-testid="hotel-logo-overlay">
-      {glass ? (
-        <div className="rounded-2xl backdrop-blur-md border border-white/10 bg-black/20 p-2">
-          <img src={logoUrl} alt="Hotel Logo" className="h-10 w-auto max-w-[110px] object-contain" />
-        </div>
-      ) : (
-        <img src={logoUrl} alt="Hotel Logo" className="h-12 w-auto max-w-[120px] object-contain drop-shadow-lg" style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.5))' }} />
-      )}
-    </div>
-  );
+  return style;
 };
 
 const SLIDE_TYPES = {
@@ -58,7 +44,7 @@ export default function LobbyDisplay() {
     city: "Clifton, Texas",
     photo_interval: 8,
     weather_slide_duration: 15,
-    aspect_ratio: "4:3",
+    aspect_ratio: "3:4",
     display_orientation: "portrait",
     display_scale: 100,
     display_width: 7.5,
@@ -165,7 +151,6 @@ export default function LobbyDisplay() {
       newSlides.push({ type: SLIDE_TYPES.EVENTS, id: 'events', duration: specialDuration * 1000 });
     }
 
-    // Insert active videos based on frequency and cycle count
     if (videos.length > 0) {
       const activeVids = videos.filter(v => {
         const freq = v.frequency || 1;
@@ -178,7 +163,6 @@ export default function LobbyDisplay() {
       });
     }
 
-    // Insert content section slides
     const contentTypes = Object.keys(contentSections);
     contentTypes.forEach((type, i) => {
       const items = contentSections[type];
@@ -199,7 +183,7 @@ export default function LobbyDisplay() {
     });
   }, [slides.length]);
 
-  // Slide auto-advance (skip timer for video slides — they advance on video end)
+  // Slide auto-advance
   useEffect(() => {
     if (slides.length === 0) return;
     const current = slides[currentSlideIndex];
@@ -216,7 +200,8 @@ export default function LobbyDisplay() {
     return () => clearInterval(interval);
   }, [headlines.length]);
 
-  // Periodic refreshes
+  // Periodic refreshes — settings refresh every 30s so admin changes appear on lobby
+  useEffect(() => { const i = setInterval(fetchSettings, 30 * 1000); return () => clearInterval(i); }, [fetchSettings]);
   useEffect(() => { const i = setInterval(fetchWeather, 10 * 60 * 1000); return () => clearInterval(i); }, [fetchWeather]);
   useEffect(() => { const i = setInterval(fetchNews, 30 * 60 * 1000); return () => clearInterval(i); }, [fetchNews]);
   useEffect(() => { const i = setInterval(fetchOverlays, 60 * 1000); return () => clearInterval(i); }, [fetchOverlays]);
@@ -227,57 +212,179 @@ export default function LobbyDisplay() {
   const isPortrait = settings.display_orientation === "portrait";
   const scale = settings.display_scale / 100;
 
+  // Compute aspect ratio CSS from settings
+  const aspectRatio = (() => {
+    const w = parseFloat(settings.display_width) || 7.5;
+    const h = parseFloat(settings.display_height) || 10;
+    return `${w} / ${h}`;
+  })();
+
   const getImageUrl = (image) => {
     if (!image) return "";
     if (image.url.startsWith("http")) return image.url;
     return `${BACKEND_URL}${image.url}`;
   };
 
+  // Widget visibility, colors, positions, glass
+  const visibility = {
+    logo: settings.widget_visibility?.logo !== false,
+    clock: settings.widget_visibility?.clock !== false,
+    weather: settings.widget_visibility?.weather !== false,
+    news: settings.widget_visibility?.news !== false,
+  };
+  const colors = {
+    clock: settings.widget_colors?.clock || "#ffffff",
+    weather: settings.widget_colors?.weather || "#ffffff",
+    news: settings.widget_colors?.news || "#ffffff",
+  };
+  const glass = settings.glass_effect !== false;
+  const raw = settings.widget_positions || {};
+  const positions = {
+    logo: raw.logo || { x: 2, y: 2 },
+    clock: raw.clock || raw.hotel_name || { x: 98, y: 2 },
+    weather: raw.weather || { x: 2, y: 98 },
+    news: raw.news || { x: 98, y: 98 },
+  };
+  const align = (pos) => pos.x >= 75 ? 'right' : pos.x <= 25 ? 'left' : 'center';
+  const currentHeadline = headlines[currentHeadlineIndex];
+  const pad = isPortrait ? 14 : 20;
+
   return (
     <div
-      className="lobby-display w-screen h-screen overflow-hidden relative bg-slate-900"
-      style={{ transform: `scale(${scale})`, transformOrigin: 'center' }}
+      className="w-screen h-screen flex items-center justify-center overflow-hidden bg-black"
       data-testid="lobby-display"
     >
-      <AnimatePresence mode="wait">
-        {currentSlide && (
-          <motion.div
-            key={currentSlide.id}
-            className="absolute inset-0"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 2, ease: "easeInOut" }}
-          >
-            {currentSlide.type === SLIDE_TYPES.WEATHER ? (
-              <WeatherSlide weather={weather} forecast={forecast} currentTime={currentTime} isPortrait={isPortrait} />
-            ) : currentSlide.type === SLIDE_TYPES.ATTRACTIONS ? (
-              <LocalAttractionsSlide weather={weather} isPortrait={isPortrait} attractions={attractions} maxItems={settings.attractions_per_slide || 6} />
-            ) : currentSlide.type === SLIDE_TYPES.EVENTS ? (
-              <EventsSlide weather={weather} currentTime={currentTime} isPortrait={isPortrait} events={localEvents} maxItems={settings.events_per_slide || 8} />
-            ) : currentSlide.type === SLIDE_TYPES.VIDEO ? (
-              <VideoSlide video={currentSlide.data} onVideoEnd={advanceSlide} isPortrait={isPortrait} />
-            ) : currentSlide.type === SLIDE_TYPES.CONTENT ? (
-              <ContentSlide items={currentSlide.data.items} sectionType={currentSlide.data.sectionType} weather={weather} isPortrait={isPortrait} />
-            ) : (
-              <PhotoSlide
-                image={currentSlide.data}
-                weather={weather}
-                settings={settings}
-                currentTheme={currentTheme}
-                isPortrait={isPortrait}
-                headlines={headlines}
-                currentHeadlineIndex={currentHeadlineIndex}
-                getImageUrl={getImageUrl}
-              />
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Aspect-ratio constrained container — matches admin setting */}
+      <div
+        className="relative overflow-hidden bg-slate-900"
+        style={{
+          aspectRatio,
+          maxWidth: '100vw',
+          maxHeight: '100vh',
+          width: isPortrait ? 'auto' : '100vw',
+          height: isPortrait ? '100vh' : 'auto',
+          transform: scale !== 1 ? `scale(${scale})` : undefined,
+          transformOrigin: 'center',
+        }}
+      >
+        {/* Slide content */}
+        <AnimatePresence mode="wait">
+          {currentSlide && (
+            <motion.div
+              key={currentSlide.id}
+              className="absolute inset-0"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 2, ease: "easeInOut" }}
+            >
+              {currentSlide.type === SLIDE_TYPES.WEATHER ? (
+                <WeatherSlide weather={weather} forecast={forecast} currentTime={currentTime} isPortrait={isPortrait} />
+              ) : currentSlide.type === SLIDE_TYPES.ATTRACTIONS ? (
+                <LocalAttractionsSlide weather={weather} isPortrait={isPortrait} attractions={attractions} maxItems={settings.attractions_per_slide || 6} />
+              ) : currentSlide.type === SLIDE_TYPES.EVENTS ? (
+                <EventsSlide weather={weather} currentTime={currentTime} isPortrait={isPortrait} events={localEvents} maxItems={settings.events_per_slide || 8} />
+              ) : currentSlide.type === SLIDE_TYPES.VIDEO ? (
+                <VideoSlide video={currentSlide.data} onVideoEnd={advanceSlide} isPortrait={isPortrait} />
+              ) : currentSlide.type === SLIDE_TYPES.CONTENT ? (
+                <ContentSlide items={currentSlide.data.items} sectionType={currentSlide.data.sectionType} weather={weather} isPortrait={isPortrait} />
+              ) : (
+                <PhotoSlide
+                  image={currentSlide.data}
+                  weather={weather}
+                  settings={settings}
+                  currentTheme={currentTheme}
+                  isPortrait={isPortrait}
+                  headlines={headlines}
+                  currentHeadlineIndex={currentHeadlineIndex}
+                  getImageUrl={getImageUrl}
+                />
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-      <LogoOverlay logoUrl={settings.logo_url} positions={settings.widget_positions} visibility={settings.widget_visibility} glassEffect={settings.glass_effect} />
-      <SlideIndicators slides={slides} currentSlideIndex={currentSlideIndex} />
-      <OverlayDisplay overlays={activeOverlays} />
+        {/* Gradient overlays for widget readability — visible on ALL slides */}
+        <div className="absolute inset-0 z-[8] pointer-events-none">
+          <div className="absolute top-0 left-0 right-0 h-[12%] bg-gradient-to-b from-black/40 to-transparent" />
+          <div className="absolute bottom-0 left-0 right-0 h-[12%] bg-gradient-to-t from-black/40 to-transparent" />
+        </div>
+
+        {/* Persistent widget overlays — visible on ALL slides, all 4 corners */}
+        <div className="absolute inset-0 z-[9] pointer-events-none" style={{ padding: pad }}>
+          {/* TOP-LEFT: Logo */}
+          {visibility.logo && settings.logo_url && (
+            <motion.div
+              className="absolute"
+              style={cornerStyle(positions.logo, 0)}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.8 }}
+            >
+              {glass ? (
+                <GlassPanel className="p-2">
+                  <img src={settings.logo_url} alt="Logo" className="h-10 w-auto max-w-[110px] object-contain" />
+                </GlassPanel>
+              ) : (
+                <img src={settings.logo_url} alt="Logo" className="h-12 w-auto max-w-[120px] object-contain drop-shadow-lg" style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.5))' }} />
+              )}
+            </motion.div>
+          )}
+
+          {/* TOP-RIGHT: Clock */}
+          {visibility.clock && (
+            <motion.div
+              className="absolute"
+              style={{ ...cornerStyle(positions.clock, 0), textAlign: align(positions.clock) }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.8, delay: 0.1 }}
+            >
+              <LiveClock theme={currentTheme} size={isPortrait ? "compact" : "large"} format={settings.clock_format || "12h"} clockStyle={settings.clock_style || "digital"} fontStyle={settings.font_style || "modern"} color={colors.clock} glass={glass} />
+              <DateDisplay theme={currentTheme} fontStyle={settings.font_style || "modern"} color={colors.clock} />
+            </motion.div>
+          )}
+
+          {/* BOTTOM-LEFT: Weather */}
+          {visibility.weather && (
+            <motion.div
+              className="absolute"
+              style={{ ...cornerStyle(positions.weather, 0), maxWidth: isPortrait ? '60%' : '38%' }}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+            >
+              <WeatherWidget weather={weather} theme={currentTheme} color={colors.weather} glass={glass} />
+            </motion.div>
+          )}
+
+          {/* BOTTOM-RIGHT: News */}
+          {visibility.news && (
+            <motion.div
+              className="absolute"
+              style={{ ...cornerStyle(positions.news, 0), maxWidth: isPortrait ? '60%' : '38%', textAlign: align(positions.news) }}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.4 }}
+            >
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={currentHeadlineIndex}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.6 }}
+                >
+                  <NewsHeadline headline={currentHeadline} theme={currentTheme} color={colors.news} glass={glass} />
+                </motion.div>
+              </AnimatePresence>
+            </motion.div>
+          )}
+        </div>
+
+        <SlideIndicators slides={slides} currentSlideIndex={currentSlideIndex} />
+        <OverlayDisplay overlays={activeOverlays} />
+      </div>
     </div>
   );
 }

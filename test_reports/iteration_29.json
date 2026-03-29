@@ -1,0 +1,70 @@
+{
+  "summary": "Iteration 29 testing complete. All features verified working: widgets moved to LobbyDisplay as persistent overlays (visible on ALL slides), aspect ratio CSS applied to lobby container, admin aspect ratio changes affect lobby display correctly, 30s settings auto-refresh working.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "passed_tests": [
+    "Backend: GET /api/settings returns aspect_ratio, display_width, display_height fields",
+    "Backend: PUT /api/settings with 16:9 landscape persists correctly",
+    "Backend: PUT /api/settings with 3:4 portrait persists correctly",
+    "Backend: Widget positions (logo, clock, weather, news) persist correctly",
+    "Backend: Widget visibility settings save correctly",
+    "Backend: Admin login with admin@lobbydisplay.com / Admin@2026!",
+    "Frontend: Admin login successful",
+    "Frontend: Admin Display tab shows aspect ratio presets (16:9, 9:16, 4:3, 3:4, Custom)",
+    "Frontend: Admin Display tab shows orientation toggle (Landscape/Portrait)",
+    "Frontend: Admin Display tab shows Widget Positioning panel with draggable widgets",
+    "Frontend: Clicking 16:9 preset and Save updates settings",
+    "Frontend: Clicking 3:4 preset and Save updates settings",
+    "Frontend: Settings saved successfully toast appears",
+    "Lobby Display: Loads with correct aspect ratio CSS (aspect-ratio: 3 / 4 for portrait)",
+    "Lobby Display: Adapts to 16:9 landscape after admin change (aspect-ratio: 16 / 9)",
+    "Lobby Display: Adapts to 3:4 portrait after admin change (aspect-ratio: 3 / 4)",
+    "Lobby Display: Clock widget visible in top-right corner",
+    "Lobby Display: Weather widget visible in bottom-left corner",
+    "Lobby Display: News widget visible in bottom-right corner",
+    "Lobby Display: Widgets persist across slide transitions (visible on photo slides)",
+    "Lobby Display: Widgets visible on content slides (Amenities)",
+    "Lobby Display: Widgets remain in corners regardless of aspect ratio"
+  ],
+  "architectural_changes_verified": {
+    "widgets_moved_to_lobby_display": "Widgets (logo, clock, weather, news) are now persistent overlays in LobbyDisplay.jsx, visible on ALL slide types",
+    "aspect_ratio_css_applied": "Lobby container uses CSS aspect-ratio property from settings (display_width / display_height)",
+    "settings_auto_refresh": "Settings refresh every 30 seconds so admin changes appear on lobby display",
+    "corner_positioning": "cornerStyle function pins widgets to nearest screen edge based on position percentage"
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_aspect_ratio_settings.py",
+    "/app/test_reports/pytest/pytest_aspect_ratio.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "LobbyDisplay.jsx correctly implements persistent widget overlays with z-index 9",
+    "cornerStyle function properly handles corner positioning (left/right, top/bottom based on x/y percentages)",
+    "Aspect ratio CSS uses display_width / display_height from settings",
+    "30s settings refresh interval implemented correctly",
+    "PhotoSlide.jsx simplified - no longer handles widgets (moved to LobbyDisplay)",
+    "Default widget positions: logo(2,2) clock(98,2) weather(2,98) news(98,98)"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_aspect_ratio_settings.py"
+  ],
+  "success_rate": {
+    "backend": "100% (12/12 tests passed)",
+    "frontend": "100% (all UI elements verified)"
+  },
+  "test_credentials": {
+    "admin_email": "admin@lobbydisplay.com",
+    "admin_password": "Admin@2026!"
+  },
+  "seed_data_creation": "None - used existing settings",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "All features working correctly. Widgets are now persistent overlays in LobbyDisplay.jsx visible on ALL slide types (photo, weather, attractions, events, content). Aspect ratio CSS is applied to lobby container from settings. Admin can change aspect ratio (16:9, 9:16, 4:3, 3:4, custom) and lobby display adapts after reload or 30s auto-refresh. Widget positions: logo(2,2) clock(98,2) weather(2,98) news(98,98) - all in corners."
+}
