@@ -12,6 +12,21 @@ import OverlayDisplay from "../components/lobby/OverlayDisplay";
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
+// Small hotel logo overlay — shown on every slide
+const LogoOverlay = ({ logoUrl }) => {
+  if (!logoUrl) return null;
+  return (
+    <div className="absolute top-4 left-4 z-[10]" data-testid="hotel-logo-overlay">
+      <img
+        src={logoUrl}
+        alt="Hotel Logo"
+        className="h-12 w-auto max-w-[120px] object-contain drop-shadow-lg"
+        style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.5))' }}
+      />
+    </div>
+  );
+};
+
 const SLIDE_TYPES = {
   PHOTO: 'photo',
   WEATHER: 'weather',
@@ -187,6 +202,7 @@ export default function LobbyDisplay() {
         )}
       </AnimatePresence>
 
+      <LogoOverlay logoUrl={settings.logo_url} />
       <SlideIndicators slides={slides} currentSlideIndex={currentSlideIndex} />
       <OverlayDisplay overlays={activeOverlays} />
     </div>

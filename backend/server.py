@@ -146,6 +146,7 @@ class Settings(BaseModel):
         "weather": {"x": 0, "y": 100},
         "news": {"x": 100, "y": 100},
     })
+    logo_url: str = ""
 
 class SettingsUpdate(BaseModel):
     hotel_name: Optional[str] = None
@@ -174,6 +175,7 @@ class SettingsUpdate(BaseModel):
     events_auto_hide_expired: Optional[bool] = None
     events_sort_by: Optional[str] = None
     widget_positions: Optional[dict] = None
+    logo_url: Optional[str] = None
 
 class HotelImage(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -616,7 +618,51 @@ async def migrate_images_to_cloud():
             logger.error(f"Migration failed for {filename}: {e}")
             failed += 1
     
-    return {"message": f"Migration complete", "migrated": migrated, "failed": failed, "total_local": len(local_images)}
+    return {"message": "Migration complete", "migrated": migrated, "failed": failed, "total_local": len(local_images)}
+
+# ===== Logo Upload Endpoint =====
+
+@api_router.post("/settings/logo")
+async def upload_logo(file: UploadFile = File(...)):
+    """Upload hotel logo to Cloudinary and save URL in settings"""
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="File must be an image")
+    
+    content = await file.read()
+    try:
+        result = cloudinary.uploader.upload(
+            content,
+            folder="hotel_lobby/logo",
+            resource_type="image"
+        )
+    except Exception as e:
+        logger.error(f"Cloudinary logo upload failed: {e}")
+        raise HTTPException(status_code=500, detail="Logo upload failed")
+    
+    logo_url = result["secure_url"]
+    await db.settings.update_one(
+        {"id": "hotel_settings"},
+        {"$set": {"logo_url": logo_url, "logo_cloudinary_id": result["public_id"]}},
+        upsert=True
+    )
+    return {"logo_url": logo_url}
+
+@api_router.delete("/settings/logo")
+async def delete_logo():
+    """Remove hotel logo"""
+    settings = await db.settings.find_one({"id": "hotel_settings"}, {"_id": 0})
+    if settings and settings.get("logo_cloudinary_id"):
+        try:
+            cloudinary.uploader.destroy(settings["logo_cloudinary_id"], invalidate=True)
+        except Exception as e:
+            logger.error(f"Cloudinary logo delete failed: {e}")
+    
+    await db.settings.update_one(
+        {"id": "hotel_settings"},
+        {"$set": {"logo_url": "", "logo_cloudinary_id": ""}},
+        upsert=True
+    )
+    return {"message": "Logo removed"}
 
 # ===== Weather Provider: WeatherAPI.com =====
 # Maps WeatherAPI condition codes to OpenWeatherMap icon codes for frontend theme compatibility.

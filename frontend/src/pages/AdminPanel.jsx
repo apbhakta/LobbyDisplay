@@ -432,7 +432,7 @@ const LivePreview = ({ settings, weather }) => {
 };
 
 // Widget Position Panel — allows drag-and-drop widget placement
-const WidgetPositionPanel = ({ settings, setSettings }) => {
+const WidgetPositionPanel = ({ settings, setSettings, onSave }) => {
   const [activeWidget, setActiveWidget] = useState(null);
 
   const positions = settings.widget_positions || {
@@ -461,7 +461,14 @@ const WidgetPositionPanel = ({ settings, setSettings }) => {
   const handleSpotClick = (spot) => {
     if (!activeWidget) return;
     const newPositions = { ...positions, [activeWidget]: { x: spot.x, y: spot.y } };
-    setSettings(prev => ({ ...prev, widget_positions: newPositions }));
+    setSettings(prev => {
+      const updated = { ...prev, widget_positions: newPositions };
+      // Auto-save widget positions
+      if (onSave) {
+        setTimeout(() => onSave(updated), 100);
+      }
+      return updated;
+    });
     setActiveWidget(null);
   };
 
@@ -736,10 +743,11 @@ function AdminDashboard({ navigate, user, onLogout, showPasswordChange, setShowP
     CONTENT_SECTIONS.forEach(s => fetchContent(s.type));
   }, [fetchSettings, fetchImages, fetchWeather, fetchAttractions, fetchEvents, fetchOverlays, fetchContent]);
 
-  const handleSaveSettings = async () => {
+  const handleSaveSettings = async (settingsToSave) => {
+    const data = settingsToSave || settings;
     setLoading(true);
     try {
-      await axios.put(`${API}/settings`, settings);
+      await axios.put(`${API}/settings`, data);
       toast.success("Settings saved successfully");
     } catch (error) {
       console.error("Error saving settings:", error);
@@ -2074,6 +2082,90 @@ function AdminDashboard({ navigate, user, onLogout, showPasswordChange, setShowP
               </CardContent>
             </Card>
 
+            {/* Hotel Logo Upload */}
+            <Card className="bg-card border-white/10">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ImageIcon className="w-5 h-5" />
+                  Hotel Logo
+                </CardTitle>
+                <CardDescription>Upload your hotel logo — appears on the top-left of every slide</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {settings.logo_url ? (
+                  <div className="flex items-center gap-4">
+                    <div className="w-24 h-24 rounded-lg border border-white/10 bg-black/30 flex items-center justify-center p-2">
+                      <img src={settings.logo_url} alt="Hotel Logo" className="max-h-full max-w-full object-contain" data-testid="logo-preview" />
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-sm text-muted-foreground">Logo uploaded</p>
+                      <div className="flex gap-2">
+                        <label className="cursor-pointer">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              const formData = new FormData();
+                              formData.append("file", file);
+                              try {
+                                const res = await axios.post(`${API}/settings/logo`, formData, { headers: { "Content-Type": "multipart/form-data" } });
+                                setSettings(prev => ({ ...prev, logo_url: res.data.logo_url }));
+                                toast.success("Logo updated");
+                              } catch { toast.error("Failed to upload logo"); }
+                            }}
+                            data-testid="logo-replace-input"
+                          />
+                          <Button variant="outline" size="sm" asChild><span>Replace</span></Button>
+                        </label>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={async () => {
+                            try {
+                              await axios.delete(`${API}/settings/logo`);
+                              setSettings(prev => ({ ...prev, logo_url: "" }));
+                              toast.success("Logo removed");
+                            } catch { toast.error("Failed to remove logo"); }
+                          }}
+                          data-testid="logo-delete-button"
+                        >
+                          <Trash2 className="w-4 h-4 mr-1" /> Remove
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <label className="cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        const formData = new FormData();
+                        formData.append("file", file);
+                        try {
+                          const res = await axios.post(`${API}/settings/logo`, formData, { headers: { "Content-Type": "multipart/form-data" } });
+                          setSettings(prev => ({ ...prev, logo_url: res.data.logo_url }));
+                          toast.success("Logo uploaded");
+                        } catch { toast.error("Failed to upload logo"); }
+                      }}
+                      data-testid="logo-upload-input"
+                    />
+                    <div className="border-2 border-dashed border-white/20 rounded-xl p-8 text-center hover:border-primary/40 transition-colors">
+                      <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+                      <p className="text-sm font-medium">Click to upload hotel logo</p>
+                      <p className="text-xs text-muted-foreground mt-1">PNG or SVG recommended for transparency</p>
+                    </div>
+                  </label>
+                )}
+              </CardContent>
+            </Card>
+
             <Card className="bg-card border-white/10">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -2338,7 +2430,7 @@ function AdminDashboard({ navigate, user, onLogout, showPasswordChange, setShowP
                 </Card>
 
                 {/* Widget Positioning */}
-                <WidgetPositionPanel settings={settings} setSettings={setSettings} />
+                <WidgetPositionPanel settings={settings} setSettings={setSettings} onSave={handleSaveSettings} />
 
                 {/* Widget Sizing & Spacing */}
                 <Card className="bg-card border-white/10">
