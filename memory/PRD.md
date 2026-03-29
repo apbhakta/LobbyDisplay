@@ -82,6 +82,16 @@ Build a premium fullscreen hotel lobby display web app in Clifton, Texas for a 1
 ## P1 Upcoming Tasks
 - Scrolling ticker bar at bottom for content announcements/promotions (content_items integration)
 
+### Phase 9: Admin Authentication (Completed Feb 2026)
+- [x] JWT-based admin login with bcrypt password hashing
+- [x] Login page at `/admin` with email/password form
+- [x] Admin seeded on startup from `ADMIN_EMAIL`/`ADMIN_PASSWORD` env vars
+- [x] Token-based auth: 24hr JWT, stored in httpOnly cookie + localStorage
+- [x] Password change modal in admin header (requires current password)
+- [x] Logout clears token, returns to login page
+- [x] Public lobby display at `/` works without auth
+- [x] Endpoints: POST /api/auth/login, GET /api/auth/me, POST /api/auth/logout, POST /api/auth/change-password
+
 ### Phase 7: Portrait 4:3 Default Display (Completed Feb 2026)
 - [x] Default display: Portrait orientation, 4:3 aspect ratio, 7.5x10 inches
 - [x] Backend, frontend, admin defaults all updated to portrait 4:3
