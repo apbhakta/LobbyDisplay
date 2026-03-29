@@ -1,0 +1,93 @@
+{
+  "summary": "Iteration 28 testing complete. Widget overlap bug fix verified. The unified center-point positioning system (translate -50%,-50%) is working correctly in both admin drag canvas and lobby display. Widgets are positioned in corners away from content in portrait 9:16 mode.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "passed_tests": [
+    "Backend: GET /api/settings returns widget_positions field with correct structure",
+    "Backend: PUT /api/settings saves and returns widget_positions correctly",
+    "Backend: Widget positions persist after reload (GET after PUT)",
+    "Backend: Portrait default positions use corner placement (logo 10,4 clock 85,4 weather 10,92 news 85,92)",
+    "Backend: Landscape default positions use corner placement (logo 5,5 clock 90,5 weather 5,92 news 90,92)",
+    "Backend: Widget visibility settings save correctly",
+    "Backend: Orientation switch to portrait works",
+    "Backend: Orientation switch to landscape works",
+    "Backend: Custom aspect ratio saves correctly",
+    "Frontend: Admin login with admin@lobbydisplay.com / Admin@2026!",
+    "Frontend: Display tab loads with Screen Aspect Ratio presets (16:9, 9:16, 4:3, 3:4, Custom)",
+    "Frontend: Orientation toggle (Landscape/Portrait) functional",
+    "Frontend: Widget Position canvas renders with correct 9:16 portrait aspect ratio",
+    "Frontend: Widget Position canvas shows draggable widgets (Logo, Clock, Weather, News) in corners",
+    "Frontend: Dragging widget updates position and saves automatically",
+    "Frontend: Switching to Landscape resets widget positions to landscape defaults",
+    "Frontend: Switching to Portrait resets widget positions to portrait defaults",
+    "Frontend: Reset Positions button resets to current orientation defaults",
+    "Frontend: Settings saved successfully toast appears after changes",
+    "Lobby Display: Renders in portrait 9:16 mode",
+    "Lobby Display: Clock widget positioned at top-right (85%, 4%)",
+    "Lobby Display: Weather widget positioned at bottom-left (10%, 92%)",
+    "Lobby Display: News widget positioned at bottom-right (85%, 92%)",
+    "Lobby Display: Widgets use center-point positioning (translate -50%,-50%)",
+    "Lobby Display: NO widgets overlapping with center content",
+    "Lobby Display: Content slides (Amenities, etc.) clearly visible without widget overlap"
+  ],
+  "bug_verification": {
+    "original_bug": "Widgets overlapped with content when aspect ratio or orientation changed",
+    "root_cause": "Admin drag canvas used center-point positioning (translate -50%,-50%) but display used edge-based smart anchoring (left vs right, top vs bottom)",
+    "fix_applied": "Unified center-point positioning everywhere - both PhotoSlide.jsx and LobbyDisplay.jsx now use left+top+translate(-50%,-50%)",
+    "verification_result": "FIXED - Widgets now positioned in corners, no overlap with center content"
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_widget_positions.py",
+    "/app/test_reports/pytest/pytest_widget_positions.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "PhotoSlide.jsx centerStyle function correctly uses left+top+translate(-50%,-50%)",
+    "LobbyDisplay.jsx LogoOverlay uses same center-point positioning",
+    "WidgetPositionPanel.jsx drag canvas uses identical positioning system",
+    "Default positions changed to corners: portrait logo(10,4) clock(85,4) weather(10,92) news(85,92)",
+    "handleOrientationToggle and handlePresetSelect correctly reset positions on orientation change"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_widget_positions.py"
+  ],
+  "success_rate": {
+    "backend": "100% (9/9 tests passed)",
+    "frontend": "100% (all widget positioning UI elements verified)"
+  },
+  "test_credentials": {
+    "admin_email": "admin@lobbydisplay.com",
+    "admin_password": "Admin@2026!"
+  },
+  "seed_data_creation": "None - used existing settings",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Widget overlap bug is FIXED. Both admin drag canvas and lobby display now use unified center-point positioning (left+top+translate(-50%,-50%)). Default positions place widgets in corners: portrait logo(10,4) clock(85,4) weather(10,92) news(85,92), landscape logo(5,5) clock(90,5) weather(5,92) news(90,92). Positions auto-reset when orientation changes. All settings persist via PUT /api/settings.",
+  "widget_positioning_system": {
+    "positioning_method": "center-point with translate(-50%, -50%)",
+    "portrait_defaults": {
+      "logo": {"x": 10, "y": 4},
+      "clock": {"x": 85, "y": 4},
+      "weather": {"x": 10, "y": 92},
+      "news": {"x": 85, "y": 92}
+    },
+    "landscape_defaults": {
+      "logo": {"x": 5, "y": 5},
+      "clock": {"x": 90, "y": 5},
+      "weather": {"x": 5, "y": 92},
+      "news": {"x": 90, "y": 92}
+    },
+    "files_using_system": [
+      "/app/frontend/src/components/lobby/PhotoSlide.jsx",
+      "/app/frontend/src/pages/LobbyDisplay.jsx",
+      "/app/frontend/src/components/admin/WidgetPositionPanel.jsx"
+    ]
+  }
+}

@@ -50,14 +50,13 @@ export default function PhotoSlide({
   };
   const glass = settings.glass_effect !== false;
 
-  // Widget positions — smart anchoring
-  // x <= 50: left-anchored, x > 50: right-anchored
-  // y <= 50: top-anchored, y > 50: bottom-anchored
-  // This ensures old grid values (0/100) AND free-form values both work
-  // Orientation-aware defaults: portrait stacks vertically, landscape uses corners
-  const defaultPos = isPortrait
-    ? { logo: { x: 50, y: 3 }, clock: { x: 50, y: 10 }, weather: { x: 50, y: 82 }, news: { x: 50, y: 93 } }
-    : { logo: { x: 0, y: 0 }, clock: { x: 100, y: 0 }, weather: { x: 0, y: 100 }, news: { x: 100, y: 100 } };
+  // Widget positions — use same center-point system as drag canvas
+  const defaultPos = {
+    logo: { x: 5, y: 5 },
+    clock: { x: 90, y: 5 },
+    weather: { x: 5, y: 92 },
+    news: { x: 90, y: 92 },
+  };
   const raw = settings.widget_positions || {};
   const positions = {
     logo: raw.logo || defaultPos.logo,
@@ -66,15 +65,17 @@ export default function PhotoSlide({
     news: raw.news || defaultPos.news,
   };
 
-  const anchorStyle = (pos) => {
-    const style = {};
-    // Add small inset so widgets at edges (0/100) don't get cut off
-    if (pos.x <= 50) style.left = `${Math.max(pos.x, 1)}%`;
-    else style.right = `${Math.max(100 - pos.x, 1)}%`;
-    if (pos.y <= 50) style.top = `${Math.max(pos.y, 1)}%`;
-    else style.bottom = `${Math.max(100 - pos.y, 2)}%`;
-    return style;
-  };
+  // Center-point positioning — matches the drag canvas exactly
+  // Widgets are placed with their CENTER at (x%, y%)
+  // Clamp to keep widgets from going off-screen edges
+  const centerStyle = (pos) => ({
+    left: `${Math.max(2, Math.min(98, pos.x))}%`,
+    top: `${Math.max(2, Math.min(98, pos.y))}%`,
+    transform: 'translate(-50%, -50%)',
+  });
+
+  // Text alignment based on position
+  const textAlign = (pos) => pos.x > 60 ? 'right' : pos.x < 40 ? 'left' : 'center';
 
   return (
     <div className="w-full h-full relative" data-testid="photo-slide">
@@ -100,13 +101,13 @@ export default function PhotoSlide({
         <div className="absolute top-0 left-0 right-0 h-[15%] bg-gradient-to-b from-black/20 to-transparent" />
       </div>
 
-      {/* Positioned widgets */}
-      <div className="absolute inset-0 z-[3]" style={{ padding: isPortrait ? Math.min(padding, 24) : padding }}>
+      {/* Positioned widgets — uses center-point positioning matching the admin drag canvas */}
+      <div className="absolute inset-0 z-[3] overflow-hidden" style={{ padding }}>
         {/* Logo */}
         {visibility.logo && settings.logo_url && (
           <motion.div
             className="absolute"
-            style={{ ...anchorStyle(positions.logo), ...(isPortrait && positions.logo.x > 25 && positions.logo.x < 75 ? { left: '50%', right: 'auto', transform: 'translateX(-50%)' } : {}) }}
+            style={centerStyle(positions.logo)}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.8 }}
@@ -125,11 +126,7 @@ export default function PhotoSlide({
         {visibility.clock && (
           <motion.div
             className="absolute"
-            style={{
-              ...anchorStyle(positions.clock),
-              textAlign: isPortrait && positions.clock.x > 25 && positions.clock.x < 75 ? 'center' : (positions.clock.x > 50 ? 'right' : 'left'),
-              ...(isPortrait && positions.clock.x > 25 && positions.clock.x < 75 ? { left: '50%', right: 'auto', transform: 'translateX(-50%)' } : {}),
-            }}
+            style={{ ...centerStyle(positions.clock), textAlign: textAlign(positions.clock) }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.8, delay: 0.1 }}
@@ -144,14 +141,11 @@ export default function PhotoSlide({
           <motion.div
             className="absolute overflow-hidden"
             style={{
-              ...anchorStyle(positions.weather),
-              maxWidth: isPortrait ? '90%' : '45%',
-              maxHeight: '30%',
-              transform: `scale(${wScale})`,
-              transformOrigin: `${positions.weather.x <= 50 ? 'left' : 'right'} ${positions.weather.y <= 50 ? 'top' : 'bottom'}`,
-              ...(isPortrait && positions.weather.x > 25 && positions.weather.x < 75 ? { left: '50%', right: 'auto', transform: `scale(${wScale}) translateX(-50%)`, transformOrigin: 'center top' } : {}),
+              ...centerStyle(positions.weather),
+              maxWidth: isPortrait ? '80%' : '40%',
+              maxHeight: '25%',
             }}
-            initial={{ opacity: 0, y: positions.weather.y <= 50 ? -20 : 20 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
           >
@@ -164,14 +158,11 @@ export default function PhotoSlide({
           <motion.div
             className="absolute overflow-hidden"
             style={{
-              ...anchorStyle(positions.news),
-              maxWidth: isPortrait ? '90%' : '45%',
-              maxHeight: '18%',
-              transform: `scale(${wScale})`,
-              transformOrigin: `${positions.news.x <= 50 ? 'left' : 'right'} ${positions.news.y <= 50 ? 'top' : 'bottom'}`,
-              ...(isPortrait && positions.news.x > 25 && positions.news.x < 75 ? { left: '50%', right: 'auto', transform: `scale(${wScale}) translateX(-50%)`, transformOrigin: 'center top' } : {}),
+              ...centerStyle(positions.news),
+              maxWidth: isPortrait ? '80%' : '40%',
+              maxHeight: '15%',
             }}
-            initial={{ opacity: 0, y: positions.news.y <= 50 ? -20 : 20 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.4 }}
           >
